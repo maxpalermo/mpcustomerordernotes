@@ -96,7 +96,7 @@
     }
     function printCustomerOrderNote()
     {
-
+        window.open("{$currentindex}?ajax&action=printCustomerOrderNote&id_order={$id_order}", "Report");
     }
     function saveCustomerOrderNote()
     {
@@ -133,19 +133,50 @@
             },
             success: function(response)
             {
-                // You can of course merge these lines
+                //Thanks to Ernest Marcinko <http://codecanyon.net/user/anago/portfolio>
                 response = response.replace(/^\s*[\r\n]/gm, "");
                 response = response.match(/!!START!!(.*[\s\S]*)!!END!!/)[1];
-                // If you don't need JSON, just skip the line below
                 response = JSON.parse(response);
-             
-                // Here the response is in the expected JSON format
-                console.log(response);  // prints the response
+                
+                //Refresh table
+                if (response.result == 1) {
+                    $.growl.notice({
+                        title: '{l s='Operation done' mod='mpcustomerordernotes'}',
+                        message: '{l s='Message saved.' mod='mpcustomerordernotes'}'
+                    });
+                    refreshTableCustomerNotes();
+                }
+                
             },
             error: function()
             {
 
             }
         });
+    }
+    function refreshTableCustomerNotes()
+    {
+        $.ajax({
+            type: 'post',
+            data:
+            {
+                ajax: true,
+                action: 'refreshTableCustomerNotes'
+            },
+            success: function(response)
+            {
+                //Thanks to Ernest Marcinko <http://codecanyon.net/user/anago/portfolio>
+                response = response.replace(/^\s*[\r\n]/gm, "");
+                response = response.match(/!!START!!(.*[\s\S]*)!!END!!/)[1];
+                console.log ('table:', response);
+                $('#mp-customer-notes').html(response);
+                return false;
+            },
+            error: function()
+            {
+
+            }
+        });
+        return '';
     }
 </script>

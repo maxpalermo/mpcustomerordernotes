@@ -36,6 +36,8 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
     public $content;
     /** @var MpCustomerOrderNotes Object module */
     private $module;
+    /** @var String Table name */
+    private $table_name;
 
     public static $definition = array(
         'table' => 'mp_customer_order_notes',
@@ -45,22 +47,22 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
             'id_employee' => array(
                 'type' => self::TYPE_INT,
                 'validate' => 'isUnsignedId',
-                'required' => 'false',
+                'required' => false,
             ),
             'id_order' => array(
                 'type' => self::TYPE_INT,
                 'validate' => 'isUnsignedId',
-                'required' => 'true',
+                'required' => true,
             ),
             'date_add' => array(
                 'type' => self::TYPE_DATE,
                 'validate' => 'isDate',
-                'required' => 'true',
+                'required' => true,
             ),
             'content' => array(
                 'type' => self::TYPE_STRING,
                 'validate' => 'isAnything',
-                'required' => 'true',
+                'required' => true,
             ),
         ),
     );
@@ -86,6 +88,7 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
 
         parent::__construct($id, $this->id_lang, $this->id_shop);
         $this->module = $module;
+        $this->table_name = 'mp_customer_order_notes';
     }
 
     public static function installSQL($module)
@@ -129,6 +132,23 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
 
     public function getTable()
     {
+        //<!--Get filters-->
+        $submitReset = (int)Tools::isSubmit('submitReset'.$this->table_name);
+        $submitFilterTable = (int)Tools::getValue('submitFilter'.$this->table_name, 1);
+        $page = (int)Tools::getValue('page', 1);
+        $pagination = (int)Tools::getValue('select_pagination', 20); 
+        $date = Tools::getValue($this->table_name."Filter_date_add", array());
+        if ($date) {
+            $date_start = $date[0];
+            $date_end = $date[1];
+        } else {
+            $date_start = '';
+            $date_end = '';
+        }
+        $employee = Tools::getValue($this->table_name."Filter_employee", '');
+        $submitFilter = (int)Tools::isSubmit('submitFilter');
+        //<!--End -->
+
         $currentIndex = $this->link->getAdminLink('AdminOrders').
             '&id_order='.Tools::getValue('id_order').
             '&vieworder';
@@ -139,8 +159,8 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
         $helperList->currentIndex = $currentIndex;
         $helperList->identifier = 'id_mp_customer_order_notes';
         $helperList->no_link = true;
-        $helperList->page = Tools::getValue('submitFilterconfiguration', 1);
-        $helperList->_default_pagination = Tools::getValue('configuration_pagination', 20);
+        $helperList->page = $submitFilterTable;
+        $helperList->_default_pagination = $pagination;
         $helperList->show_toolbar = true;
         $helperList->toolbar_btn = array(
             'print' => array(
@@ -154,7 +174,9 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
         $helperList->title = $this->module->l('Total notes:', get_class($this));
         $helperList->table = 'mp_customer_order_notes';
 
-        $list = $this->getList();
+        $list = $this->getList($submitReset,$date_start, $date_end, $employee);
+        $helperList->listTotal = count($list);
+        
         $fields_display = $this->getHeaders();
 
         return $helperList->generateList($list, $fields_display);
@@ -168,6 +190,7 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
                 'align' => 'right',
                 'width' => 48,
                 'title' => $this->l('Id', 'mpcustomerordernotes'),
+                'search' => false,
             ),
             'date_add' => array(
                 'type' => 'datetime',
@@ -185,15 +208,20 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
                 'type' => 'text',
                 'align' => 'left',
                 'width' => 'auto',
-                'title' => $this->l('Message', 'mpcustomerordernotes'),  
+                'title' => $this->l('Message', 'mpcustomerordernotes'),
+                'search' => false,
             ),
         );
 
         return $field_list;
     }
 
-    private function getList()
+    public function getList($reset = true, $date_start = '', $date_end = '', $employee = '')
     {
+        $id_order = (int)Tools::getValue('id_order', 0);
+        if (!$id_order) {
+            $id_order = $this->id_order;
+        }
         $db = Db::getInstance();
         $sql = new DbQueryCore();
         $sql->select('n.*')
@@ -203,12 +231,43 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
             ->innerJoin('employee', 'e', 'e.id_employee=n.id_employee')
             ->where('n.id_order='.(int)Tools::getValue('id_order'))
             ->orderBy('n.date_add DESC');
+        if (!$reset) {
+            if ($date_start && $date_end) {
+                $date_start .= ' 00:00:00';
+                $date_end .= ' 23:59:59';
+                $sql->where('date_add between \''.$date_start.'\' and \''.$date_end.'\'');
+            } elseif ($date_start && !$date_end) {
+                $date_start .= ' 00:00:00';
+                $sql->where('date_add >= \''.$date_start.'\'');
+            } elseif (!$date_start && $date_end) {
+                $date_end .= ' 23:59:59';
+                $sql->where('date_add <= \''.$date_end.'\'');
+            }
+            if ($employee) {
+                $sql_emp = new DbQueryCore();
+                $sql_emp->select ('id_employee')
+                    ->from('employee')
+                    ->where("concat(`firstname`,' ', `lastname`) like '%".$employee."%'");
+                $ids = $db->executeS($sql_emp);
+                if ($ids) {
+                    $arr = array();
+                    foreach ($ids as $id) {
+                        $arr[] = $id['id_employee'];
+                    }
+                    $id_employee = implode(',', $arr);
+                    $sql->where('e.id_employee in ('.$id_employee.')');
+                }
+            }
+        }
+        
         $result = $db->executeS($sql);
         if ($result) {
             foreach($result as &$row)
             {
+                $row['id'] = $row['id_mp_customer_order_notes'];
                 $row['employee'] = $row['firstname'].' '.$row['lastname'];
                 $row['content'] = stripslashes($row['content']);
+                $row['date'] = Tools::displayDate($row['date_add'], null, true);
             }
             return $result;
         } else {

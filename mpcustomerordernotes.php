@@ -29,6 +29,7 @@ if (!defined('_PS_VERSION_')) {
 }
 
 require_once _PS_MODULE_DIR_.'mpcustomerordernotes/classes/MpCustomerOrderNotesObjectModel.php';
+require_once _PS_MODULE_DIR_.'mpcustomerordernotes/classes/MpCustomerOrderNotesPrintReport.php';
 
 class MpCustomerOrderNotes extends Module
 {
@@ -54,6 +55,12 @@ class MpCustomerOrderNotes extends Module
         /** CONSTRUCT **/
         parent::__construct();
         /** OTHER CONFIG **/
+        if (!isset($this->context->employee)) {
+            $cookie = new Cookie("psAdmin");
+            $this->id_employee = $cookie->id_employee;
+        } else {
+            $this->id_employee = (int) $this->context->employee->id;    
+        }
         $this->adminClassName = 'AdminMpCustomerOrderNotes';
         $this->displayName = $this->l('MP Customer order notes');
         $this->description = $this->l('With this module you can add private notes to your orders.');
@@ -63,7 +70,6 @@ class MpCustomerOrderNotes extends Module
         $this->smarty = $this->context->smarty;
         $this->id_lang = (int) $this->context->language->id;
         $this->id_shop = (int) $this->context->shop->id;
-        $this->id_employee = (int) $this->context->employee->id;
         $this->link = $this->context->link;
     }
     
@@ -259,7 +265,6 @@ class MpCustomerOrderNotes extends Module
                 'id_employee' => $id_employee,
                 'date_add' => $date_add,
                 'content' => $content,
-                'object' => Tools::jsonEncode($object),
             );
 
             print $l_delimiter;
@@ -268,12 +273,24 @@ class MpCustomerOrderNotes extends Module
             exit();
         }
 
+        if (Tools::isSubmit('ajax') && Tools::getValue('action') == 'refreshTableCustomerNotes') {
+            $table = new MpCustomerOrderNotesObjectModel($this);
+            $l_delimiter = "!!START!!";
+            $r_delimiter = "!!END!!";
+
+            print $l_delimiter;
+            print $table->getTable();
+            print $r_delimiter;
+            exit();
+        }
 
         $template = $this->getAdminTemplatePath().'customer_messages.tpl';
         $table = new MpCustomerOrderNotesObjectModel($this);
-
+        $shop  = new ShopCore($this->id_shop);
+        $url = $shop->getBaseURI();
         $this->smarty->assign(
             array(
+                'currentindex' => $url.'modules/mpcustomerordernotes/printReport.php',
                 'customer_order_table' => $table->getTable(),
                 'id_order' => Tools::getValue('id_order', 0),
                 'id_employee' => $this->id_employee,
@@ -300,5 +317,83 @@ class MpCustomerOrderNotes extends Module
     public function hookDisplayAdminOrderTabShip()
     {
         return;
+    }
+
+    public function printCustomerOrderNote()
+    {
+        $PDF_HEADER_LOGO = dirname(__FILE__).'/views/img/tcpdf.jpg';
+        $table = new MpCustomerOrderNotesObjectModel($this, 0, $this->id_employee);
+        $table->id_order = (int)Tools::getValue('id_order', 0);
+        $order = new Order($table->id_order);
+        $customer = new Customer($order->id_customer);
+
+        $list = $table->getList(true);
+        $this->smarty->assign(
+            array(
+                'table_data' => $list,
+                'id_order' => $table->id_order,
+                'date_order' => Tools::displayDate($order->date_add),
+                'customer' => Tools::strtoupper($customer->firstname.' '.$customer->lastname),
+            )
+        );
+        $html = $this->smarty->fetch($this->getAdminTemplatePath().'pdf_table.tpl');
+
+        //print $html;
+        //exit();
+
+        $pageSize = array(210,297);
+        $pdf = new MpCustomerOrderNotesPrintReport("P", "mm", $pageSize, true, "UTF-8", false, false);
+        $pdf->SetCreator(PDF_CREATOR);
+        $pdf->SetAuthor('Massimiliano Palermo');
+        $pdf->SetTitle(
+            sprintf(
+                $this->l('Customer Order notes for order %s'),
+                Tools::getValue('id_order', '')
+            )
+        );
+        $pdf->SetSubject('TCPDF Report');
+        $pdf->SetKeywords('TCPDF, PDF, report, massimiliano palermo, digital solutions, mpcustomerordernote');
+
+        // set default header data
+        /*
+        $pdf->SetHeaderData(
+            $PDF_HEADER_LOGO,
+            300,
+            '{l s='Order Notes' mod='mpcustomerordernote'}',
+            '{l s='Order Notes' mod='mpcustomerordernote'}'
+        );
+        */
+        $pdf->SetHeaderData(PDF_HEADER_LOGO, PDF_HEADER_LOGO_WIDTH, PDF_HEADER_TITLE, PDF_HEADER_STRING);
+
+        // set header and footer fonts
+        $pdf->setHeaderFont(Array(PDF_FONT_NAME_MAIN, '', PDF_FONT_SIZE_MAIN));
+        $pdf->setFooterFont(Array(PDF_FONT_NAME_DATA, '', PDF_FONT_SIZE_DATA));
+
+        // set default monospaced font
+        $pdf->SetDefaultMonospacedFont(PDF_FONT_MONOSPACED);
+
+        // set margins
+        $pdf->SetMargins(PDF_MARGIN_LEFT, PDF_MARGIN_TOP, PDF_MARGIN_RIGHT);
+        $pdf->SetHeaderMargin(PDF_MARGIN_HEADER);
+        $pdf->SetFooterMargin(PDF_MARGIN_FOOTER);
+
+        // set auto page breaks
+        $pdf->SetAutoPageBreak(TRUE, PDF_MARGIN_BOTTOM);
+
+        // set image scale factor
+        $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
+
+        // set font
+        $pdf->SetFont('helvetica', 'B', 20);
+
+        // add a page
+        $pdf->AddPage();
+        $pdf->SetFont('helvetica', '', 8);
+        $pdf->writeHTML($html, true, false, false, false, '');
+
+        //ob_end_clean();
+        print $pdf->Output('report.pdf', "I");
+
+        exit();
     }
 }
