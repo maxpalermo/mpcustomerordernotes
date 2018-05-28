@@ -28,16 +28,25 @@ ini_set('max_execution_time', 300); //300 seconds = 5 minutes
 ini_set('post_max_size', '128M');
 ini_set('upload_max_filesize', '128M');
 
+require_once _PS_MODULE_DIR_.'mpcustomerordernotes/classes/MpCustomerOrderNotesAdmin.php';
+
+
 class AdminMpCustomerOrderNotesController extends ModuleAdminController
 {
     public function __construct()
     {
-        $this->bootstrap = true;
         $this->className = 'AdminMpCustomerOrderNotes';
+        $this->bootstrap = true;
+        parent::__construct();
         $this->context = Context::getContext();
         $this->token = Tools::getAdminTokenLite($this->className);
-        parent::__construct();
+        $this->id_lang = (int)$this->context->language->id;
+        $this->id_shop = (int)$this->context->shop->id;
+        $this->id_employee = (int)$this->context->employee->id;
+        $this->link = $this->context->link;
         $this->module = $this->context->controller->module;
+        $this->smarty = $this->context->smarty;
+        $this->table_name = 'mp_customer_order_notes';
     }
 
     public function addError($message)
@@ -55,16 +64,10 @@ class AdminMpCustomerOrderNotesController extends ModuleAdminController
         $this->confirmations[] = $message;
     }
 
-    public function initContent()
-    {
-        parent::initContent();
-    }
-
     public function setMedia()
     {
-        /*
+        parent::setMedia();
         if (Tools::getValue('controller') == $this->className) {
-            parent::setMedia();
             $this->addJqueryUI('ui.dialog');
             $this->addJqueryUI('ui.progressbar');
             $this->addJqueryUI('ui.draggable');
@@ -75,6 +78,36 @@ class AdminMpCustomerOrderNotesController extends ModuleAdminController
             $this->addJqueryUI('ui.datepicker');
             $this->addJqueryPlugin('growl');
         }
-        */
+    }
+
+    public function initContent()
+    {
+        $submit = (int)Tools::isSubmit('deletemp_customer_order_notes');
+        $update = (int)Tools::isSubmit('updatemp_customer_order_notes');
+        $id_note = (int)Tools::getValue('id_mp_customer_order_notes', 0);
+
+        if ($submit && $id_note) {
+            $note = new MpCustomerOrderNotesObjectModel($this->module, $id_note);
+            $result = $note->delete();
+            if ($result) {
+                $this->addConfirmation($this->l('Message deleted.'));
+            } else {
+                $this->addError(sprintf($this->l('Error deleting message: %s'), Db::getInstance()->getMsgError()));
+            }
+        }
+
+        if ($update && $id_note) {
+            $note = new MpCustomerOrderNotesObjectModel($this->module, $id_note);
+            $link = $this->link->getAdminLink('AdminOrders')
+                .'&id_order='.(int)$note->id_order
+                .'&vieworder';
+            ToolsCore::redirectAdmin($link);
+            exit();
+        }
+
+
+        $notes = new MpCustomerOrderNotesAdmin();
+        $this->content = $notes->getTable();
+        parent::initContent();
     }
 }

@@ -37,7 +37,7 @@
                 <i class="icon icon-caret-down" ></i>
             </button>
             &nbsp;
-            {l s='Order notes' mod='mpcustomerordernotes'}
+            {l s='Order notes' mod='mpcustomerordernotes'} : <span class="badge" id='tot_cust_notes'>{$tot_notes|escape:'htmlall':'UTF-8'}</span>
             <span>
                 <button type="button" class="btn btn-info pull-right" onclick='javascript:printCustomerOrderNote();'style="font-size: 1.0em; margin: 10px;">
                     <i class="icon icon-print"></i>&nbsp;{l s='Print report' mod='mpcustomerordernotes'}
@@ -61,7 +61,7 @@
                         <i class="icon icon-times" style="color: #A94442;"></i>&nbsp;{l s='Cancel' mod='mpcustomerordernotes'}
                     </button>
                     <button type="button" class="btn btn-default pull-right" onclick='javascript:saveCustomerOrderNote();'>
-                        <i class="icon icon-plus" style="color: #0AAF00;"></i>&nbsp;{l s='Add new note' mod='mpcustomerordernotes'}
+                        <i class="icon icon-plus" style="color: #0AAF00;"></i>&nbsp;{l s='Save' mod='mpcustomerordernotes'}
                     </button>
                 </div>
             </div>
@@ -96,12 +96,12 @@
     }
     function printCustomerOrderNote()
     {
-        window.open("{$currentindex}?ajax&action=printCustomerOrderNote&id_order={$id_order}", "Report");
+        window.open("{$currentindex}?ajax&action=printCustomerOrderNote&id_order={$id_order|escape:'htmlall':'UTF-8'}", "Report");
     }
     function saveCustomerOrderNote()
     {
-        var id_order = '{$id_order}';
-        var id_employee = '{$id_employee}';
+        var id_order = '{$id_order|escape:'htmlall':'UTF-8'}';
+        var id_employee = '{$id_employee|escape:'htmlall':'UTF-8'}';
         var date_add = new Date();
         var date_json = date_add.toJSON();
         var dates = date_json.split('T');
@@ -170,6 +170,8 @@
                 response = response.match(/!!START!!(.*[\s\S]*)!!END!!/)[1];
                 console.log ('table:', response);
                 $('#mp-customer-notes').html(response);
+                var tot = $('#form-mp_customer_order_notes .panel-heading>.badge').text();
+                $('#tot_cust_notes').text(tot);
                 return false;
             },
             error: function()

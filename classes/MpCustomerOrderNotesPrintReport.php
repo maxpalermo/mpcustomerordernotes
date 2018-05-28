@@ -29,11 +29,20 @@ require_once _PS_TOOL_DIR_.'tcpdf/tcpdf.php';
 
 class MpCustomerOrderNotesPrintReport extends TCPDF
 {
+    private $module;
+
+    public function __construct()
+    {
+        $this->module = new MpCustomerOrderNotes();
+        parent::__construct();
+    }
+
     //Page header
-    public function Header() {
+    public function header()
+    {
         // Logo
-        $image_file = dirname(__FILE__).'/../views/img/tcpdf.jpg';
-        $this->Image($image_file, 10, 10, 15, '', 'JPG', '', 'T', false, 300, '', false, false, 0, false, false, false);
+        $image_file = dirname(__FILE__).'/../logo.png';
+        $this->Image($image_file, 10, 10, 15, '', 'PNG', '', 'T', false, 300, '', false, false, 0, false, false, false);
         // Set font
         $this->SetFont('helvetica', 'B', 20);
         // Title
@@ -41,13 +50,18 @@ class MpCustomerOrderNotesPrintReport extends TCPDF
     }
 
     // Page footer
-    public function Footer() {
+    public function footer()
+    {
         // Position at 15 mm from bottom
         $this->SetY(-15);
         // Set font
         $this->SetFont('helvetica', 'I', 8);
         // Page number
-        $this->Cell(0, 10, 'Page '.$this->getAliasNumPage().'/'.$this->getAliasNbPages(), 0, false, 'C', 0, '', 0, false, 'T', 'M');
+        $page = sprintf(
+            $this->module->l('Page %s/%s', get_class($this)),
+            $this->getAliasNumPage(),
+            $this->getAliasNbPages()
+        );
+        $this->Cell(0, 10, $page, 0, false, 'C', 0, '', 0, false, 'T', 'M');
     }
 }
-

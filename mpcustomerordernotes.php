@@ -59,7 +59,7 @@ class MpCustomerOrderNotes extends Module
             $cookie = new Cookie("psAdmin");
             $this->id_employee = $cookie->id_employee;
         } else {
-            $this->id_employee = (int) $this->context->employee->id;    
+            $this->id_employee = (int) $this->context->employee->id;
         }
         $this->adminClassName = 'AdminMpCustomerOrderNotes';
         $this->displayName = $this->l('MP Customer order notes');
@@ -249,7 +249,6 @@ class MpCustomerOrderNotes extends Module
             $id_order = (int)Tools::getValue('id_order', 0);
             $id_employee = (int)Tools::getValue('id_employee', 0);
             $date_add = Tools::getValue('date_add');
-            $date_json = Tools::jsonDecode(Tools::getValue('date_json'));
             $content = Tools::getValue('content');
             $l_delimiter = "!!START!!";
             $r_delimiter = "!!END!!";
@@ -292,6 +291,7 @@ class MpCustomerOrderNotes extends Module
             array(
                 'currentindex' => $url.'modules/mpcustomerordernotes/printReport.php',
                 'customer_order_table' => $table->getTable(),
+                'tot_notes' => $table->getTotNotes(),
                 'id_order' => Tools::getValue('id_order', 0),
                 'id_employee' => $this->id_employee,
             )
@@ -301,27 +301,27 @@ class MpCustomerOrderNotes extends Module
 
     public function hookDisplayAdminOrderContentOrder()
     {
-        return;
+        //TODO
     }
 
     public function hookDisplayAdminOrderContentShip()
     {
-        return;
+        //TODO
     }
 
     public function hookDisplayAdminOrderTabOrder()
     {
-        return;
+        //TODO
     }
 
     public function hookDisplayAdminOrderTabShip()
     {
-        return;
+        //TODO
     }
 
     public function printCustomerOrderNote()
     {
-        $PDF_HEADER_LOGO = dirname(__FILE__).'/views/img/tcpdf.jpg';
+        //$PDF_HEADER_LOGO = dirname(__FILE__).'/views/img/tcpdf.jpg';
         $table = new MpCustomerOrderNotesObjectModel($this, 0, $this->id_employee);
         $table->id_order = (int)Tools::getValue('id_order', 0);
         $order = new Order($table->id_order);
@@ -366,8 +366,8 @@ class MpCustomerOrderNotes extends Module
         $pdf->SetHeaderData(PDF_HEADER_LOGO, PDF_HEADER_LOGO_WIDTH, PDF_HEADER_TITLE, PDF_HEADER_STRING);
 
         // set header and footer fonts
-        $pdf->setHeaderFont(Array(PDF_FONT_NAME_MAIN, '', PDF_FONT_SIZE_MAIN));
-        $pdf->setFooterFont(Array(PDF_FONT_NAME_DATA, '', PDF_FONT_SIZE_DATA));
+        $pdf->setHeaderFont(array(PDF_FONT_NAME_MAIN, '', PDF_FONT_SIZE_MAIN));
+        $pdf->setFooterFont(array(PDF_FONT_NAME_DATA, '', PDF_FONT_SIZE_DATA));
 
         // set default monospaced font
         $pdf->SetDefaultMonospacedFont(PDF_FONT_MONOSPACED);
@@ -378,7 +378,7 @@ class MpCustomerOrderNotes extends Module
         $pdf->SetFooterMargin(PDF_MARGIN_FOOTER);
 
         // set auto page breaks
-        $pdf->SetAutoPageBreak(TRUE, PDF_MARGIN_BOTTOM);
+        $pdf->SetAutoPageBreak(true, PDF_MARGIN_BOTTOM);
 
         // set image scale factor
         $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);

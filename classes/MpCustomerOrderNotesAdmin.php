@@ -24,98 +24,18 @@
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
-class MpCustomerOrderNotesObjectModel extends ObjectModel
+class MpCustomerOrderNotesAdmin
 {
-    /** @var int Id employee code */
-    public $id_employee;
-    /** @var int Id order code */
-    public $id_order;
-    /** @var date Date message */
-    public $date_add;
-    /** @var string Message content */
-    public $content;
-    /** @var MpCustomerOrderNotes Object module */
-    private $module;
-    /** @var String Table name */
-    private $table_name;
-    /** @var int Tot notes */
-    private $tot_notes;
-
-    public static $definition = array(
-        'table' => 'mp_customer_order_notes',
-        'primary' => 'id_mp_customer_order_notes',
-        'multilang' => false,
-        'fields' => array(
-            'id_employee' => array(
-                'type' => self::TYPE_INT,
-                'validate' => 'isUnsignedId',
-                'required' => false,
-            ),
-            'id_order' => array(
-                'type' => self::TYPE_INT,
-                'validate' => 'isUnsignedId',
-                'required' => true,
-            ),
-            'date_add' => array(
-                'type' => self::TYPE_DATE,
-                'validate' => 'isDate',
-                'required' => true,
-            ),
-            'content' => array(
-                'type' => self::TYPE_STRING,
-                'validate' => 'isAnything',
-                'required' => true,
-            ),
-        ),
-    );
-
-    public function __construct($module, $id = null, $id_employee = null, $id_lang = null, $id_shop = null)
+    public function __construct()
     {
-        if (!$id_shop) {
-            $this->id_shop = (int)Context::getContext()->shop->id;
-        } else {
-            $this->id_shop = (int)$id_shop;
-        }
-        if (!$id_lang) {
-            $this->id_lang = Context::getContext()->language->id;
-        } else {
-            $this->id_lang = (int)$id_lang;
-        }
-        if (!$id_employee) {
-            $this->id_employee = Context::getContext()->employee->id;
-        } else {
-            $this->id_employee = (int)$id_employee;
-        }
-        $this->link = Context::getContext()->link;
-
-        parent::__construct($id, $this->id_lang, $this->id_shop);
-        $this->module = $module;
+        $this->context = Context::getContext();
+        $this->id_lang = (int)$this->context->language->id;
+        $this->id_shop = (int)$this->context->shop->id;
+        $this->id_employee = (int)$this->context->employee->id;
+        $this->link = $this->context->link;
+        $this->module = $this->context->controller->module;
         $this->table_name = 'mp_customer_order_notes';
         $this->className = 'AdminMpCustomerOrderNotes';
-    }
-
-    public static function installSQL($module)
-    {
-        $sql = array();
-        $sql[] = "CREATE TABLE IF NOT EXISTS `"._DB_PREFIX_."mp_customer_order_notes` (
-            `id_mp_customer_order_notes` int(11) NOT NULL AUTO_INCREMENT,
-            `id_employee` int(11) NOT NULL,
-            `id_order` int(11) NOT NULL,
-            `date_add` datetime NOT NULL,
-            `content` text NOT NULL,
-            PRIMARY KEY  (`id_mp_customer_order_notes`)
-        ) ENGINE="._MYSQL_ENGINE_." DEFAULT CHARSET=utf8;";
-        foreach ($sql as $query) {
-            try {
-                if (Db::getInstance()->execute($query) == false) {
-                    $module->addError(Db::getInstance()->getMsgError());
-                    return false;
-                }
-            } catch (Exception $ex) {
-                PrestaShopLoggerCore::addLog('Install SQL error '.$ex->getCode().' '.$ex->getMessage());
-            }
-        }
-        return true;
     }
 
     public function getEmployee()
@@ -134,6 +54,11 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
         }
     }
 
+    private function l($message)
+    {
+        return $this->module->l($message, 'MpCustomerOrderNotesAdmin');
+    }
+
     public function getTable()
     {
         //<!--Get filters-->
@@ -142,6 +67,7 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
         //$page = (int)Tools::getValue('page', 1);
         $pagination = (int)Tools::getValue('select_pagination', 20);
         $date = Tools::getValue($this->table_name."Filter_date_add", array());
+        $id_order = (int)(int)Tools::getValue($this->table_name."Filter_id_order", 0);
         if ($date) {
             $date_start = $date[0];
             $date_end = $date[1];
@@ -153,16 +79,16 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
         //$submitFilter = (int)Tools::isSubmit('submitFilter');
         //<!--End -->
 
-        $currentIndex = $this->link->getAdminLink('AdminOrders').
-            '&id_order='.Tools::getValue('id_order').
-            '&vieworder';
+        $currentIndex = $this->link->getAdminLink($this->className, false);
 
         $helperList = new HelperList();
         $helperList->bootstrap = true;
-        $helperList->actions = array();
+        if ($this->context->employee->id_profile == 1) {
+            $helperList->actions = array('delete');
+        }
         $helperList->currentIndex = $currentIndex;
         $helperList->identifier = 'id_mp_customer_order_notes';
-        $helperList->no_link = true;
+        $helperList->no_link = false;
         $helperList->page = $submitFilterTable;
         $helperList->_default_pagination = $pagination;
         $helperList->show_toolbar = true;
@@ -174,13 +100,12 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
         );
         $helperList->shopLinkType='';
         $helperList->simple_header = false;
-        $helperList->token = Tools::getAdminTokenLite('AdminOrders');
-        $helperList->title = $this->l('Total notes:');
+        $helperList->token = Tools::getAdminTokenLite($this->className);
+        $helperList->title = $this->l('Total notes:', $this->className);
         $helperList->table = 'mp_customer_order_notes';
 
-        $list = $this->getList($submitReset, $date_start, $date_end, $employee);
+        $list = $this->getRows($submitReset, $id_order, $date_start, $date_end, $employee);
         $helperList->listTotal = count($list);
-        $this->tot_notes = count($list);
         
         $fields_display = $this->getHeaders();
 
@@ -195,6 +120,20 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
                 'align' => 'right',
                 'width' => 48,
                 'title' => $this->l('Id', 'mpcustomerordernotes'),
+                'search' => false,
+            ),
+            'id_order' => array(
+                'type' => 'text',
+                'align' => 'right',
+                'width' => 48,
+                'title' => $this->l('Id order', 'mpcustomerordernotes'),
+                'search' => true,
+            ),
+            'order' => array(
+                'type' => 'text',
+                'align' => 'right',
+                'width' => 48,
+                'title' => $this->l('Order', 'mpcustomerordernotes'),
                 'search' => false,
             ),
             'date_add' => array(
@@ -221,20 +160,18 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
         return $field_list;
     }
 
-    public function getList($reset = true, $date_start = '', $date_end = '', $employee = '')
+    public function getRows($reset = true, $id_order = 0, $date_start = '', $date_end = '', $employee = '')
     {
-        $id_order = (int)Tools::getValue('id_order', 0);
-        if (!$id_order) {
-            $id_order = $this->id_order;
-        }
         $db = Db::getInstance();
         $sql = new DbQueryCore();
         $sql->select('n.*')
             ->select('e.firstname')
             ->select('e.lastname')
+            ->select('o.reference as order_reference')
+            ->select('o.date_add as order_date')
             ->from('mp_customer_order_notes', 'n')
             ->innerJoin('employee', 'e', 'e.id_employee=n.id_employee')
-            ->where('n.id_order='.(int)Tools::getValue('id_order'))
+            ->innerJoin('orders', 'o', 'o.id_order=n.id_order')
             ->orderBy('n.date_add DESC');
         if (!$reset) {
             if ($date_start && $date_end) {
@@ -263,6 +200,9 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
                     $sql->where('e.id_employee in ('.$id_employee.')');
                 }
             }
+            if ($id_order) {
+                $sql->where('o.id_order = '.(int)$id_order);
+            }
         }
         
         $result = $db->executeS($sql);
@@ -272,20 +212,11 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
                 $row['employee'] = $row['firstname'].' '.$row['lastname'];
                 $row['content'] = str_replace("\\", "", $row['content']);
                 $row['date'] = Tools::displayDate($row['date_add'], null, true);
+                $row['order'] = $row['order_reference'].' '.Tools::displayDate($row['order_date']);
             }
             return $result;
         } else {
             return array();
         }
-    }
-
-    public function getTotNotes()
-    {
-        return (int)$this->tot_notes;
-    }
-
-    private function l($message)
-    {
-        return $this->module->l($message, 'MpCustomerOrderNotesObjectModel');
     }
 }

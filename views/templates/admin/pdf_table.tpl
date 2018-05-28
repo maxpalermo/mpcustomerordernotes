@@ -27,40 +27,44 @@
     {
         border-collapse: collapse;
         border: none;
-        width: 80%;
+        width: 100%;
         margin: 0 auto;
         font-family: sans-serif;
+        background-color: #dedede;
     }
-    table th
-    {
-        background-color: #eeeeee;
-        color: #555;
-        border: 1px solid #dedede;
-        padding-bottom: 10px;
-    }
-    table td
-    {
-        border: 1px solid #eeeeee;
-        padding-bottom: 10px;
-    }
+    
 </style>
-<h1>
-    {l s='Order' mod='mpcustomerordernotes'} {$id_order} - {$date_order} - {$customer}
-</h1>
+<br>
 <hr>
+<table>
+    <tr>
+        <td><h2>{l s='Order reference:' mod='mpcustomerordernotes'} {$id_order|escape:'htmlall':'UTF-8'}</h2></td>
+        <td><h2>{l s='Customer:' mod='mpcustomerordernotes'} {$customer|escape:'htmlall':'UTF-8'}</h2></td>
+    </tr>
+    <tr>
+        <td><h2>{l s='Date order: ' mod='mpcustomerordernotes'} {$date_order|escape:'htmlall':'UTF-8'}</h2></td>
+        <td><h2>{l s='Total messages:' mod='mpcustomerordernotes'} {count($table_data)|escape:'htmlall':'UTF-8'}</h2></td>        
+    </tr>
+</table>
+
+
+
+
+<hr>
+<br>
 <br>
 {foreach $table_data as $row}
 <hr>
 <br>
 <ul style="font-family: sans-serif; font-size: 1.3em;">
     <li>
-        <span>{l s='Date' mod='mpcustomerordernotes'}: <strong>{$row.date}</strong></span>
+        <span>{l s='Date' mod='mpcustomerordernotes'}: <strong>{$row.date|escape:'htmlall':'UTF-8'}</strong></span>
     </li>
     <li>
-        <span>{l s='Employee' mod='mpcustomerordernotes'}: <strong>{$row.employee}</strong></span>
+        <span>{l s='Employee' mod='mpcustomerordernotes'}: <strong>{$row.employee|escape:'htmlall':'UTF-8'}</strong></span>
     </li>
     <li>
-        <span>{l s='Message' mod='mpcustomerordernotes'}: <strong>{$row.content}</strong></span>
+        <span>{l s='Message' mod='mpcustomerordernotes'}: <strong>{$row.content|escape:'htmlall':'UTF-8'}</strong></span>
     </li>
 </ul>
 <br>
