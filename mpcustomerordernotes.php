@@ -52,6 +52,7 @@ class MpCustomerOrderNotes extends Module
         $this->author = 'Digital Solutions®';
         $this->need_instance = 0;
         $this->bootstrap = true;
+        $this->module_key = "f197a003c4b0f405c4194b4472237623";
         /** CONSTRUCT **/
         parent::__construct();
         /** OTHER CONFIG **/
