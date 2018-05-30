@@ -28,6 +28,23 @@
     {
         cursor: pointer;
     }
+    .checkmark {
+        position: relative;
+        top: 0;
+        left: 0;
+        height: 25px;
+        width: 25px;
+        background-color: #eee;
+        display: inline-block;
+    }
+    .labelmark {
+        position: relative;
+        top: 0;
+        left: 0;
+        height: 25px;
+        background-color: transparent;
+        display: inline-block;
+    }
 </style>
 
 <div class="row">
@@ -39,6 +56,9 @@
             &nbsp;
             {l s='Order notes' mod='mpcustomerordernotes'} : <span class="badge" id='tot_cust_notes'>{$tot_notes|escape:'htmlall':'UTF-8'}</span>
             <span>
+                <button type="button" class="btn btn-success pull-right" onclick='javascript:printOrder();'style="font-size: 1.0em; margin: 10px;">
+                    <i class="icon icon-print"></i>&nbsp;{l s='Print order' mod='mpcustomerordernotes'}
+                </button>
                 <button type="button" class="btn btn-info pull-right" onclick='javascript:printCustomerOrderNote();'style="font-size: 1.0em; margin: 10px;">
                     <i class="icon icon-print"></i>&nbsp;{l s='Print report' mod='mpcustomerordernotes'}
                 </button>
@@ -56,6 +76,18 @@
                     <label>{l s='Note text' mod='mpcustomerordernotes'}</label>
                     <textarea id="mp_customer_order_note"></textarea>
                 </div>
+                <div class="form-check-inline">
+                    <table>
+                        <tr>
+                            <td>
+                                <strong>{l s='Print this message on order report' mod='mpcustomerordernotes'}&nbsp;&nbsp;</strong>
+                            </td>
+                            <td>
+                                <input type="checkbox" class="checkmark" value="0" id="printable_check">
+                            </td>
+                        </tr>
+                    </table>
+                </div>
                 <div class="panel-footer">
                     <button type="button" class="btn btn-default pull-right" onclick="$('#mp-customer-notes-add').toggle();">
                         <i class="icon icon-times" style="color: #A94442;"></i>&nbsp;{l s='Cancel' mod='mpcustomerordernotes'}
@@ -70,9 +102,59 @@
 </div>
 
 <script type="text/javascript">
+    $(document).ready(function(){
+        fixTableNotes();
+    });
     String.prototype.isEmpty = function() {
         return (this.length === 0 || !this.trim());
     };
+
+    function fixTableNotes()
+    {
+        var tbl_notes = $('table.mp_customer_order_notes');
+        $(tbl_notes).find('tbody tr').each(function(){
+            var cell = $(this).find('td:nth-child(5)>a');
+            $(cell).attr('onclick', 'javascript:togglePrintable(this);');
+            $(cell).attr('href', '');
+        });
+    }
+
+    function togglePrintable(button)
+    {
+        if (confirm("{l s='Are you sure you want to toggle this option?' mod='mpcustomerordernotes'}")) {
+            var id = Number($(button).closest('tr').find('td:nth-child(1)').text());
+            $.ajax({
+                type: 'post',
+                data:
+                {
+                    id_note: id,
+                    ajax: true,
+                    action: 'togglePrintable'
+                },
+                success: function(response)
+                {
+                    //Thanks to Ernest Marcinko <http://codecanyon.net/user/anago/portfolio>
+                    response = response.replace(/^\s*[\r\n]/gm, "");
+                    response = response.match(/!!START!!(.*[\s\S]*)!!END!!/)[1];
+                    response = JSON.parse(response);
+                    
+                    //Refresh table
+                    if (response.result == 1) {
+                        $(button).find('i.icon-remove').addClass('hidden').css('color', '#E08F95');
+                        $(button).find('i.icon-check').removeClass('hidden').css('color', '#72C279');
+                    } else {
+                        $(button).find('i.icon-remove').removeClass('hidden').css('color', '#E08F95');
+                        $(button).find('i.icon-check').addClass('hidden').css('color', '#72C279');
+                    }
+                    
+                },
+                error: function()
+                {
+
+                }
+            });
+        }
+    }
 
     function panelToggle()
     {
@@ -87,7 +169,6 @@
     }
     function addCustomerOrderNote()
     {
-        console.log('toggle add');
         $('#mp-customer-notes-add').toggle();
         if($('#mp-customer-notes-add').is(':visible'))
         {
@@ -96,7 +177,11 @@
     }
     function printCustomerOrderNote()
     {
-        window.open("{$currentindex}?ajax&action=printCustomerOrderNote&id_order={$id_order|escape:'htmlall':'UTF-8'}", "Report");
+        window.open("{$currentindex}printReport.php?ajax&action=printCustomerOrderNote&id_order={$id_order|escape:'htmlall':'UTF-8'}", "Report");
+    }
+    function printOrder()
+    {
+        window.open("{$currentindex}printOrder.php?ajax&action=printOrder&id_order={$id_order|escape:'htmlall':'UTF-8'}", "{l s='Order' mod='mpcustomerordernotes'} {$id_order}");
     }
     function saveCustomerOrderNote()
     {
@@ -110,7 +195,7 @@
         var date_hour = date_hour.replace(/\.\d*/,'');
         var date_send = date_day+' '+date_hour;
         var content = $('#mp_customer_order_note').val();
-        console.log (date_send);
+        var printable = $('#printable_check').is(':checked')?1:0;
 
         if (String(content).isEmpty()) {
             $.growl.warning({
@@ -128,6 +213,7 @@
                 id_employee: id_employee,
                 date_add: date_send,
                 content: content,
+                printable: printable,
                 ajax: true,
                 action: 'addCustomerOrderMessage'
             },
@@ -168,10 +254,10 @@
                 //Thanks to Ernest Marcinko <http://codecanyon.net/user/anago/portfolio>
                 response = response.replace(/^\s*[\r\n]/gm, "");
                 response = response.match(/!!START!!(.*[\s\S]*)!!END!!/)[1];
-                console.log ('table:', response);
                 $('#mp-customer-notes').html(response);
                 var tot = $('#form-mp_customer_order_notes .panel-heading>.badge').text();
                 $('#tot_cust_notes').text(tot);
+                fixTableNotes();
                 return false;
             },
             error: function()

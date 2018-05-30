@@ -104,7 +104,7 @@ class MpCustomerOrderNotesAdmin
         $helperList->title = $this->l('Total notes:', $this->className);
         $helperList->table = 'mp_customer_order_notes';
 
-        $list = $this->getRows($submitReset, $id_order, $date_start, $date_end, $employee);
+        $list = $this->getRows($submitReset, $submitFilterTable, $pagination, $id_order, $date_start, $date_end, $employee);
         $helperList->listTotal = count($list);
         
         $fields_display = $this->getHeaders();
@@ -155,12 +155,28 @@ class MpCustomerOrderNotesAdmin
                 'title' => $this->l('Message', 'mpcustomerordernotes'),
                 'search' => false,
             ),
+            'deleted' => array(
+                'type' => 'bool',
+                'align' => 'center',
+                'width' => 'auto',
+                'title' => $this->l('Deleted', 'mpcustomerordernotes'),
+                'search' => false,
+                'active' => 'deleted',
+            ),
+            'printable' => array(
+                'type' => 'bool',
+                'align' => 'center',
+                'width' => 'auto',
+                'title' => $this->l('Printable', 'mpcustomerordernotes'),
+                'search' => false,
+                'active' => 'printable',
+            ),
         );
 
         return $field_list;
     }
 
-    public function getRows($reset = true, $id_order = 0, $date_start = '', $date_end = '', $employee = '')
+    public function getRows($reset = true, $page = 1, $pagination = 20, $id_order = 0, $date_start = '', $date_end = '', $employee = '')
     {
         $db = Db::getInstance();
         $sql = new DbQueryCore();
@@ -205,6 +221,10 @@ class MpCustomerOrderNotesAdmin
             }
         }
         
+        $page_start = ($page-1)*$pagination;
+        $page_end = $page*$pagination;
+        $sql->limit($page_start.','.$page_end);
+
         $result = $db->executeS($sql);
         if ($result) {
             foreach ($result as &$row) {
@@ -218,5 +238,55 @@ class MpCustomerOrderNotesAdmin
         } else {
             return array();
         }
+    }
+
+    public function postProcess()
+    {
+        if (Tools::isSubmit('printable'.$this->table_name)) {
+            $this->processPrintablemp_customer_order_notes();
+        }
+        if (Tools::isSubmit('deleted'.$this->table_name)) {
+            $this->processDeletedmp_customer_order_notes();
+        }
+    }
+
+    public function togglePrintable()
+    {
+        $id = (int)Tools::getValue('id_note', 0);
+        $db = Db::getInstance();
+        $sql_update = "UPDATE "._DB_PREFIX_.$this->table_name.
+            " SET printable = (1 - printable) where id_mp_customer_order_notes=".(int)$id;
+        $sql_get = "select printable from "._DB_PREFIX_.$this->table_name." where id_mp_customer_order_notes = ".(int)$id;
+        $db->execute($sql_update);
+        return (int)$db->getValue($sql_get);
+    }
+
+    public function toggleDeleted()
+    {
+        $id = (int)Tools::getValue('id_note', 0);
+        $db = Db::getInstance();
+        $sql_update = "UPDATE "._DB_PREFIX_.$this->table_name.
+            " SET deleted = (1 - deleted) where id_mp_customer_order_notes=".(int)$id;
+        $sql_get = "select deleted from "._DB_PREFIX_.$this->table_name." where id_mp_customer_order_notes = ".(int)$id;
+        $db->execute($sql);
+        return (int)$db->getValue($sql);
+    }
+
+    public function processPrintablemp_customer_order_notes()
+    {
+        $id = (int)Tools::getValue('id_mp_customer_order_notes', 0);
+        $db = Db::getInstance();
+        $sql = "UPDATE "._DB_PREFIX_.$this->table_name.
+            " SET printable = 1 - printable where id_mp_customer_order_notes=".(int)$id;
+        $db->execute($sql);
+    }
+
+    public function processDeletedmp_customer_order_notes()
+    {
+        $id = (int)Tools::getValue('id_mp_customer_order_notes', 0);
+        $db = Db::getInstance();
+        $sql = "UPDATE "._DB_PREFIX_.$this->table_name.
+            " SET deleted = 1 - deleted where id_mp_customer_order_notes=".(int)$id;
+        $db->execute($sql);
     }
 }

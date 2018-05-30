@@ -34,6 +34,14 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
     public $date_add;
     /** @var string Message content */
     public $content;
+    /** @var int Deleted flag */
+    public $deleted;
+    /** @var int id language */
+    public $id_lang;
+    /** @var int id shop */
+    public $id_shop;
+    /** @var int Printable flag */
+    public $printable;
     /** @var MpCustomerOrderNotes Object module */
     private $module;
     /** @var String Table name */
@@ -66,6 +74,26 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
                 'validate' => 'isAnything',
                 'required' => true,
             ),
+            'id_lang' => array(
+                'type' => self::TYPE_INT,
+                'validate' => 'isUnsignedId',
+                'required' => true,
+            ),
+            'id_shop' => array(
+                'type' => self::TYPE_INT,
+                'validate' => 'isUnsignedId',
+                'required' => true,
+            ),
+            'deleted' => array(
+                'type' => self::TYPE_BOOL,
+                'validate' => 'isBool',
+                'required' => true,
+            ),
+            'printable' => array(
+                'type' => self::TYPE_BOOL,
+                'validate' => 'isBool',
+                'required' => true,
+            ),
         ),
     );
 
@@ -86,6 +114,12 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
         } else {
             $this->id_employee = (int)$id_employee;
         }
+        if (!$this->deleted) {
+            $this->deleted = 0;
+        }
+        if (!$this->printable) {
+            $this->printable = 0;
+        }
         $this->link = Context::getContext()->link;
 
         parent::__construct($id, $this->id_lang, $this->id_shop);
@@ -103,6 +137,10 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
             `id_order` int(11) NOT NULL,
             `date_add` datetime NOT NULL,
             `content` text NOT NULL,
+            `id_lang` int(11) NOT NULL,
+            `id_shop` int(11) NOT NULL,
+            `deleted` boolean NOT NULL,
+            `printable` boolean NOT NULL,
             PRIMARY KEY  (`id_mp_customer_order_notes`)
         ) ENGINE="._MYSQL_ENGINE_." DEFAULT CHARSET=utf8;";
         foreach ($sql as $query) {
@@ -216,6 +254,18 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
                 'title' => $this->l('Message', 'mpcustomerordernotes'),
                 'search' => false,
             ),
+            'printable' => array(
+                'type' => 'bool',
+                'align' => 'center',
+                'width' => 'auto',
+                'title' => $this->l('Printable', 'mpcustomerordernotes'),
+                'confirm' => 'confirm();',
+                'onclick' => 'javascript:void(0);',
+                'on_click' => 'javascript:void(0);',
+                'search' => false,
+                'active' => 'status',
+                'ajax' => true,
+            ),
         );
 
         return $field_list;
@@ -235,6 +285,7 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
             ->from('mp_customer_order_notes', 'n')
             ->innerJoin('employee', 'e', 'e.id_employee=n.id_employee')
             ->where('n.id_order='.(int)Tools::getValue('id_order'))
+            ->where('n.deleted = 0')
             ->orderBy('n.date_add DESC');
         if (!$reset) {
             if ($date_start && $date_end) {

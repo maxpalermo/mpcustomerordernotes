@@ -110,4 +110,10 @@ class AdminMpCustomerOrderNotesController extends ModuleAdminController
         $this->content = $notes->getTable();
         parent::initContent();
     }
+
+    public function postProcess()
+    {
+        $adminclass = new MpCustomerOrderNotesAdmin();
+        $adminclass->postProcess();
+    }
 }

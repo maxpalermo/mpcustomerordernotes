@@ -30,6 +30,7 @@ if (!defined('_PS_VERSION_')) {
 
 require_once _PS_MODULE_DIR_.'mpcustomerordernotes/classes/MpCustomerOrderNotesObjectModel.php';
 require_once _PS_MODULE_DIR_.'mpcustomerordernotes/classes/MpCustomerOrderNotesPrintReport.php';
+require_once _PS_MODULE_DIR_.'mpcustomerordernotes/classes/MpCustomerOrderNotesAdmin.php';
 
 class MpCustomerOrderNotes extends Module
 {
@@ -43,6 +44,8 @@ class MpCustomerOrderNotes extends Module
     private $errors = array();
     private $warnings = array();
     private $confirmations = array();
+    private $l_delimiter = "!!START!!";
+    private $r_delimiter = "!!END!!";
 
     public function __construct()
     {
@@ -167,6 +170,19 @@ class MpCustomerOrderNotes extends Module
         }
     }
 
+    public function postProcess()
+    {
+        $adminclass = new MpCustomerOrderNotesAdmin();
+        $result = $adminclass->postProcess();
+        print $this->l_delimiter;
+        print Tools::jsonEncode(
+            array(
+                'result' => (int)$result
+            )
+        );
+        print $this->r_delimiter;     
+    }
+
     public function install()
     {
         return parent::install() &&
@@ -246,43 +262,7 @@ class MpCustomerOrderNotes extends Module
     
     public function hookDisplayAdminOrder()
     {
-        if (Tools::isSubmit('ajax') && Tools::getValue('action') == 'addCustomerOrderMessage') {
-            $id_order = (int)Tools::getValue('id_order', 0);
-            $id_employee = (int)Tools::getValue('id_employee', 0);
-            $date_add = Tools::getValue('date_add');
-            $content = Tools::getValue('content');
-            $l_delimiter = "!!START!!";
-            $r_delimiter = "!!END!!";
-            $object = new MpCustomerOrderNotesObjectModel($this);
-            $object->id_order = $id_order;
-            $object->id_employee = $id_employee;
-            $object->date_add = $date_add;
-            $object->content = pSQL(trim($content));
-            $result = (int)$object->add();
-            $response = array(
-                'result' => $result,
-                'id_order' => $id_order,
-                'id_employee' => $id_employee,
-                'date_add' => $date_add,
-                'content' => $content,
-            );
-
-            print $l_delimiter;
-            print Tools::jsonEncode($response);
-            print $r_delimiter;
-            exit();
-        }
-
-        if (Tools::isSubmit('ajax') && Tools::getValue('action') == 'refreshTableCustomerNotes') {
-            $table = new MpCustomerOrderNotesObjectModel($this);
-            $l_delimiter = "!!START!!";
-            $r_delimiter = "!!END!!";
-
-            print $l_delimiter;
-            print $table->getTable();
-            print $r_delimiter;
-            exit();
-        }
+        $this->ajax();
 
         $template = $this->getAdminTemplatePath().'customer_messages.tpl';
         $table = new MpCustomerOrderNotesObjectModel($this);
@@ -290,7 +270,7 @@ class MpCustomerOrderNotes extends Module
         $url = $shop->getBaseURI();
         $this->smarty->assign(
             array(
-                'currentindex' => $url.'modules/mpcustomerordernotes/printReport.php',
+                'currentindex' => $url.'modules/mpcustomerordernotes/',
                 'customer_order_table' => $table->getTable(),
                 'tot_notes' => $table->getTotNotes(),
                 'id_order' => Tools::getValue('id_order', 0),
@@ -318,6 +298,33 @@ class MpCustomerOrderNotes extends Module
     public function hookDisplayAdminOrderTabShip()
     {
         //TODO
+    }
+
+    public function printOrder()
+    {
+        $smarty = Context::getContext()->smarty;
+        $id_order = Tools::getValue('id_order', 0);
+        
+        $orientation = 'P';   // p for portrait view
+        $file_attachement = array();
+        $pdf_renderer = new PDFGeneratorCore((bool) Configuration::get('PS_PDF_USE_CACHE'), $orientation);
+        $obj_order = new HTMLTemplateOrderPDF($id_order, $smarty, $this->local_path . 'views/templates/admin/');
+        $pdf_renderer->setFontForLang(Context::getContext()->language->iso_code); // setting lang
+        $pdf_renderer->createHeader($obj_order->getHeader()); // creating header content
+        $pdf_renderer->createFooter($obj_order->getFooter()); // creating footer content
+        $pdf_renderer->createContent($obj_order->getContent()); // creating body content
+        $pdf_renderer->writePage(); // writing pdf page
+        
+        $file_attachement['content'] = $pdf_renderer->render($obj_order->getFilename(), false);
+        $file_attachement['name'] = $obj_order->getFilename(); // getting pdf file name
+        $file_attachement['invoice']['mime'] = 'application/pdf';
+        $file_attachement['mime'] = 'application/pdf';
+        
+        header("Content-disposition: attachment; filename=" . $file_attachement['name']);
+        header("Content-type: application/pdf");
+        print $file_attachement['content'];
+        
+        exit();
     }
 
     public function printCustomerOrderNote()
@@ -396,5 +403,70 @@ class MpCustomerOrderNotes extends Module
         print $pdf->Output('report.pdf', "I");
 
         exit();
+    }
+
+    public function ajaxProcessTogglePrintable()
+    {
+        $adminclass = new MpCustomerOrderNotesAdmin();
+        $result = $adminclass->togglePrintable();
+        print $this->l_delimiter;
+        print Tools::jsonEncode(
+            array(
+                'result' => (int)$result
+            )
+        );
+        print $this->r_delimiter;     
+        exit();
+    }
+
+    public function ajaxProcessAddCustomerOrderMessage()
+    {
+        $id_order = (int)Tools::getValue('id_order', 0);
+        $id_employee = (int)Tools::getValue('id_employee', 0);
+        $date_add = Tools::getValue('date_add');
+        $content = Tools::getValue('content');
+        $printable = (int)Tools::getValue('printable');
+        $object = new MpCustomerOrderNotesObjectModel($this);
+        $object->id_order = $id_order;
+        $object->id_employee = $id_employee;
+        $object->date_add = $date_add;
+        $object->content = pSQL(trim($content));
+        $object->printable = (int)$printable;
+        $result = (int)$object->add();
+        $response = array(
+            'result' => $result,
+            'id_order' => $id_order,
+            'id_employee' => $id_employee,
+            'date_add' => $date_add,
+            'content' => $content,
+        );
+
+        print $this->l_delimiter;
+        print Tools::jsonEncode($response);
+        print $this->r_delimiter;
+        exit();
+    }
+
+    public function ajaxProcessRefreshTableCustomerNotes()
+    {
+        $table = new MpCustomerOrderNotesObjectModel($this);
+           
+        print $this->l_delimiter;
+        print $table->getTable();
+        print $this->r_delimiter;
+        exit();
+    }
+
+    public function ajaxProcessPrintablemp_customer_order_notes()
+    {
+        $adminclass = new MpCustomerOrderNotesAdmin();
+        $result = 1;
+        print $this->l_delimiter;
+        print Tools::jsonEncode(
+            array(
+                'result' => (int)$result
+            )
+        );
+        print $this->r_delimiter;     
     }
 }
