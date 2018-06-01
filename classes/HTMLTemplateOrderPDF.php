@@ -57,8 +57,8 @@ class HTMLTemplateOrderPDF extends HTMLTemplateCore
             );
         }
         $this->customer = new CustomerCore($this->order->id_customer);
-        $this->address_delivery = $this->getAddressDelivery();
-        $this->address_invoice = $this->getAddressInvoice();
+        $this->address_delivery = $this->getAddress($this->order->id_address_delivery);
+        $this->address_invoice = $this->getAddress($this->order->id_address_invoice);
         $this->id_lang = Context::getContext()->language->id;
         $this->id_shop = Context::getContext()->shop->id;
     }
@@ -109,70 +109,13 @@ class HTMLTemplateOrderPDF extends HTMLTemplateCore
         return $footer;
     }
     
-    private function getAddressDelivery()
+    private function getAddress($id_address)
     {
-        $id_address = $this->order->id_address_delivery;
         $address = new Address($id_address);
         $state = new StateCore($address->id_state);
         
-        $output = '';
-        if ($address->company) {
-            $output .= '<strong>' . $address->company . '</strong><br>';
-        } else {
-            $output .= '<strong>' . $address->firstname . ' ' . $address->lastname . '</strong><br>';
-        }
-        if ($address->address1) {
-            $output .= $address->address1 . '<br>';
-        }
-        if ($address->address2) {
-            $output .= $address->address2 . '<br>';
-        }
-        $output .= $address->postcode . ' - ' . $address->city . '<br>';
-        if ($state->name) {
-            $output .= $state->name . ' (<strong>' . $state->iso_code . '</strong>)<br>';
-        }
-        $output .= Tools::strtoupper($address->country) . '<br>';
-        if ($address->phone_mobile && $address->phone) {
-            $output .= $this->l('Phone') . ': ' . $address->phone_mobile;
-        } elseif ($address->phone_mobile) {
-            $output .= $this->l('Phone') . ': ' . $address->phone_mobile;
-        } elseif ($address->phone) {
-            $output .= $this->l('Phone') . ': ' . $address->phone;
-        }
-        
-        return $output;
-    }
-    
-    private function getAddressInvoice()
-    {
-        $id_address = $this->order->id_address_invoice;
-        $address = new Address($id_address);
-        $state = new StateCore($address->id_state);
-        
-        $output = '';
-        if ($address->company) {
-            $output .= '<strong>' . $address->company . '</strong><br>';
-        } else {
-            $output .= '<strong>' . $address->firstname . ' ' . $address->lastname . '</strong><br>';
-        }
-        if ($address->address1) {
-            $output .= $address->address1 . '<br>';
-        }
-        if ($address->address2) {
-            $output .= $address->address2 . '<br>';
-        }
-        $output .= $address->postcode . ' - ' . $address->city . '<br>';
-        if ($state->name) {
-            $output .= $state->name . ' (<strong>' . $state->iso_code . '</strong>)<br>';
-        }
-        $output .= Tools::strtoupper($address->country) . '<br>';
-        if ($address->vat_number) {
-            $output .= $this->l('Vat number') . ': <strong>' . $address->vat_number . '</strong><br>';
-        } else {
-            $output .= $this->l('DNI') . ': <strong>' . $address->dni . '</strong><br>';
-        }
-        
-        return $output;
+        $address->state_name = $state->iso_code;
+        return $address;
     }
     
     private function getProducts()
@@ -274,14 +217,14 @@ class HTMLTemplateOrderPDF extends HTMLTemplateCore
         $result = $db->executeS($sql);
         
         if ($result) {
-            foreach($result as $id) {
+            foreach ($result as $id) {
                 $sql = new DbQueryCore();
                 $sql->select('*')
                     ->from('customized_data')
                     ->where('id_customization='.(int)$id['id_customization']);
                 $custom = $db->executeS($sql);
                 if ($custom) {
-                    foreach($custom as $custom_data) {
+                    foreach ($custom as $custom_data) {
                         $row = array(
                             'id_customization' => $custom_data['id_customization'],
                             'type' => $custom_data['type'],
@@ -328,7 +271,7 @@ class HTMLTemplateOrderPDF extends HTMLTemplateCore
         $sql = new DbQueryCore();
         $sql->select('n.*')
             ->select('concat(e.firstname,\' \', e.lastname) as employee')
-            ->from('mp_customer_order_notes','n')
+            ->from('mp_customer_order_notes', 'n')
             ->leftJoin('employee', 'e', 'e.id_employee=n.id_employee')
             ->where('n.id_order = ' . (int)$this->order->id)
             ->where('n.deleted = 0')

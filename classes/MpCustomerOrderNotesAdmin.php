@@ -104,8 +104,16 @@ class MpCustomerOrderNotesAdmin
         $helperList->title = $this->l('Total notes:', $this->className);
         $helperList->table = 'mp_customer_order_notes';
 
-        $list = $this->getRows($submitReset, $submitFilterTable, $pagination, $id_order, $date_start, $date_end, $employee);
-        $helperList->listTotal = count($list);
+        $list = $this->getRows(
+            $submitReset,
+            $submitFilterTable,
+            $pagination,
+            $id_order,
+            $date_start,
+            $date_end,
+            $employee
+        );
+        $helperList->listTotal = (int)$this->total_records;
         
         $fields_display = $this->getHeaders();
 
@@ -171,13 +179,36 @@ class MpCustomerOrderNotesAdmin
                 'search' => false,
                 'active' => 'printable',
             ),
+            'chat' => array(
+                'type' => 'bool',
+                'align' => 'center',
+                'width' => 'auto',
+                'title' => $this->l('Chat', 'mpcustomerordernotes'),
+                'search' => false,
+                'active' => 'chat',
+            ),
+            'attachments' => array(
+                'type' => 'bool',
+                'align' => 'left',
+                'width' => 'auto',
+                'title' => $this->l('Att.', 'mpcustomerordernotes'),
+                'search' => false,
+                'float' => true,
+            ),
         );
 
         return $field_list;
     }
 
-    public function getRows($reset = true, $page = 1, $pagination = 20, $id_order = 0, $date_start = '', $date_end = '', $employee = '')
-    {
+    public function getRows(
+        $reset = true,
+        $page = 1,
+        $pagination = 20,
+        $id_order = 0,
+        $date_start = '',
+        $date_end = '',
+        $employee = ''
+    ) {
         $db = Db::getInstance();
         $sql = new DbQueryCore();
         $sql->select('n.*')
@@ -220,10 +251,11 @@ class MpCustomerOrderNotesAdmin
                 $sql->where('o.id_order = '.(int)$id_order);
             }
         }
+
+        $this->total_records = count($db->executeS($sql));
         
         $page_start = ($page-1)*$pagination;
-        $page_end = $page*$pagination;
-        $sql->limit($page_start.','.$page_end);
+        $sql->limit($pagination, $page_start);
 
         $result = $db->executeS($sql);
         if ($result) {
@@ -233,6 +265,7 @@ class MpCustomerOrderNotesAdmin
                 $row['content'] = str_replace("\\", "", $row['content']);
                 $row['date'] = Tools::displayDate($row['date_add'], null, true);
                 $row['order'] = $row['order_reference'].' '.Tools::displayDate($row['order_date']);
+                $row['attachments'] = $this->getAttachments($row['id']);
             }
             return $result;
         } else {
@@ -240,53 +273,43 @@ class MpCustomerOrderNotesAdmin
         }
     }
 
-    public function postProcess()
+    public function getAttachments()
     {
-        if (Tools::isSubmit('printable'.$this->table_name)) {
-            $this->processPrintablemp_customer_order_notes();
-        }
-        if (Tools::isSubmit('deleted'.$this->table_name)) {
-            $this->processDeletedmp_customer_order_notes();
-        }
+        return "
+            <span class='badge badge-info'><i class='icon icon-paperclip'></i></span> <strong>5</strong>
+        ";
     }
 
-    public function togglePrintable()
+    public function togglePrintable($id)
     {
-        $id = (int)Tools::getValue('id_note', 0);
         $db = Db::getInstance();
         $sql_update = "UPDATE "._DB_PREFIX_.$this->table_name.
             " SET printable = (1 - printable) where id_mp_customer_order_notes=".(int)$id;
-        $sql_get = "select printable from "._DB_PREFIX_.$this->table_name." where id_mp_customer_order_notes = ".(int)$id;
+        $sql_get = "select printable from "._DB_PREFIX_.$this->table_name
+            ." where id_mp_customer_order_notes = ".(int)$id;
         $db->execute($sql_update);
         return (int)$db->getValue($sql_get);
     }
 
-    public function toggleDeleted()
+    public function toggleChat($id)
     {
-        $id = (int)Tools::getValue('id_note', 0);
+        $db = Db::getInstance();
+        $sql_update = "UPDATE "._DB_PREFIX_.$this->table_name.
+            " SET chat = (1 - chat) where id_mp_customer_order_notes=".(int)$id;
+        $sql_get = "select chat from "._DB_PREFIX_.$this->table_name
+            ." where id_mp_customer_order_notes = ".(int)$id;
+        $db->execute($sql_update);
+        return (int)$db->getValue($sql_get);
+    }
+
+    public function toggleDeleted($id)
+    {
         $db = Db::getInstance();
         $sql_update = "UPDATE "._DB_PREFIX_.$this->table_name.
             " SET deleted = (1 - deleted) where id_mp_customer_order_notes=".(int)$id;
-        $sql_get = "select deleted from "._DB_PREFIX_.$this->table_name." where id_mp_customer_order_notes = ".(int)$id;
-        $db->execute($sql);
-        return (int)$db->getValue($sql);
-    }
-
-    public function processPrintablemp_customer_order_notes()
-    {
-        $id = (int)Tools::getValue('id_mp_customer_order_notes', 0);
-        $db = Db::getInstance();
-        $sql = "UPDATE "._DB_PREFIX_.$this->table_name.
-            " SET printable = 1 - printable where id_mp_customer_order_notes=".(int)$id;
-        $db->execute($sql);
-    }
-
-    public function processDeletedmp_customer_order_notes()
-    {
-        $id = (int)Tools::getValue('id_mp_customer_order_notes', 0);
-        $db = Db::getInstance();
-        $sql = "UPDATE "._DB_PREFIX_.$this->table_name.
-            " SET deleted = 1 - deleted where id_mp_customer_order_notes=".(int)$id;
-        $db->execute($sql);
+        $sql_get = "select deleted from "._DB_PREFIX_.$this->table_name
+            ." where id_mp_customer_order_notes = ".(int)$id;
+        $db->execute($sql_update);
+        return (int)$db->getValue($sql_get);
     }
 }

@@ -82,12 +82,23 @@ class AdminMpCustomerOrderNotesController extends ModuleAdminController
 
     public function initContent()
     {
-        $submit = (int)Tools::isSubmit('deletemp_customer_order_notes');
-        $update = (int)Tools::isSubmit('updatemp_customer_order_notes');
-        $id_note = (int)Tools::getValue('id_mp_customer_order_notes', 0);
+        $notes = new MpCustomerOrderNotesAdmin();
+        $this->content = $notes->getTable();
+        parent::initContent();
+    }
+
+    public function postProcess()
+    {
+        $submit = (int)Tools::isSubmit('delete'.$this->table_name);
+        $update = (int)Tools::isSubmit('update'.$this->table_name);
+        $deleted = (int)Tools::isSubmit('deleted'.$this->table_name);
+        $printable = (int)Tools::isSubmit('printable'.$this->table_name);
+        $chat = (int)Tools::isSubmit('chat'.$this->table_name);
+        $id_note = (int)Tools::getValue('id_'.$this->table_name, 0);
+        $note = new MpCustomerOrderNotesObjectModel($this->module, $id_note);
+        $ordernote = new MpCustomerOrderNotesAdmin();
 
         if ($submit && $id_note) {
-            $note = new MpCustomerOrderNotesObjectModel($this->module, $id_note);
             $result = $note->delete();
             if ($result) {
                 $this->addConfirmation($this->l('Message deleted.'));
@@ -97,7 +108,6 @@ class AdminMpCustomerOrderNotesController extends ModuleAdminController
         }
 
         if ($update && $id_note) {
-            $note = new MpCustomerOrderNotesObjectModel($this->module, $id_note);
             $link = $this->link->getAdminLink('AdminOrders')
                 .'&id_order='.(int)$note->id_order
                 .'&vieworder';
@@ -105,15 +115,19 @@ class AdminMpCustomerOrderNotesController extends ModuleAdminController
             exit();
         }
 
+        if ($deleted && $id_note)
+        {
+            $ordernote->toggleDeleted($id_note);
+        }
 
-        $notes = new MpCustomerOrderNotesAdmin();
-        $this->content = $notes->getTable();
-        parent::initContent();
-    }
+        if ($printable && $id_note)
+        {
+            $ordernote->togglePrintable($id_note);
+        }
 
-    public function postProcess()
-    {
-        $adminclass = new MpCustomerOrderNotesAdmin();
-        $adminclass->postProcess();
+        if ($chat && $id_note)
+        {
+            $ordernote->toggleChat($id_note);
+        }
     }
 }

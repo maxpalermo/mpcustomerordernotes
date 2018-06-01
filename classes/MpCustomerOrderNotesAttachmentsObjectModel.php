@@ -24,26 +24,20 @@
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
-class MpCustomerOrderNotesObjectModel extends ObjectModel
+class MpCustomerOrderNotesAttachmentsObjectModel extends ObjectModel
 {
-    /** @var int Id employee code */
-    public $id_employee;
+    /** @var int Id note code */
+    public $id_mp_customer_order_notes;
     /** @var int Id order code */
     public $id_order;
-    /** @var date Date message */
-    public $date_add;
-    /** @var string Message content */
-    public $content;
-    /** @var int Deleted flag */
-    public $deleted;
-    /** @var int id language */
-    public $id_lang;
-    /** @var int id shop */
-    public $id_shop;
-    /** @var int Printable flag */
-    public $printable;
-    /** @var int Chat module */
-    public $chat;
+    /** @var string Link to object */
+    public $link_path;
+    /** @var string file name */
+    public $filename;
+    /** @var string file title */
+    public $filetitle;
+    /** @var string file extension */
+    public $file_ext;
     /** @var MpCustomerOrderNotes Object module */
     private $module;
     /** @var String Table name */
@@ -52,118 +46,62 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
     private $tot_notes;
 
     public static $definition = array(
-        'table' => 'mp_customer_order_notes',
-        'primary' => 'id_mp_customer_order_notes',
+        'table' => 'mp_customer_order_notes_attachments',
+        'primary' => 'id_mp_customer_order_notes_attachments',
         'multilang' => false,
         'fields' => array(
-            'id_employee' => array(
+            'id_mp_customer_order_notes' => array(
                 'type' => self::TYPE_INT,
                 'validate' => 'isUnsignedId',
-                'required' => false,
+                'required' => true,
             ),
             'id_order' => array(
                 'type' => self::TYPE_INT,
                 'validate' => 'isUnsignedId',
                 'required' => true,
             ),
-            'date_add' => array(
-                'type' => self::TYPE_DATE,
-                'validate' => 'isDate',
-                'required' => true,
-            ),
-            'content' => array(
+            'link_path' => array(
                 'type' => self::TYPE_STRING,
                 'validate' => 'isAnything',
                 'required' => true,
             ),
-            'id_lang' => array(
-                'type' => self::TYPE_INT,
-                'validate' => 'isUnsignedId',
+            'filename' => array(
+                'type' => self::TYPE_STRING,
+                'validate' => 'isAnything',
                 'required' => true,
             ),
-            'id_shop' => array(
-                'type' => self::TYPE_INT,
-                'validate' => 'isUnsignedId',
+            'file_title' => array(
+                'type' => self::TYPE_STRING,
+                'validate' => 'isAnything',
                 'required' => true,
             ),
-            'deleted' => array(
-                'type' => self::TYPE_BOOL,
-                'validate' => 'isBool',
-                'required' => true,
-            ),
-            'printable' => array(
-                'type' => self::TYPE_BOOL,
-                'validate' => 'isBool',
-                'required' => true,
-            ),
-            'chat' => array(
-                'type' => self::TYPE_BOOL,
-                'validate' => 'isBool',
+            'file_ext' => array(
+                'type' => self::TYPE_STRING,
+                'validate' => 'isAnything',
                 'required' => true,
             ),
         ),
     );
 
-    public function __construct($module, $id = null, $id_employee = null, $id_lang = null, $id_shop = null)
+    public function __construct($module, $id = null)
     {
-        if (!$id_shop) {
-            $this->id_shop = (int)Context::getContext()->shop->id;
-        } else {
-            $this->id_shop = (int)$id_shop;
-        }
-        if (!$id_lang) {
-            $this->id_lang = Context::getContext()->language->id;
-        } else {
-            $this->id_lang = (int)$id_lang;
-        }
-        if (!$id_employee) {
-            if (!isset(Context::getContext()->employee)) {
-                $this->id_employee = (int)Tools::getValue('id_employee');
-            } else {
-                $this->id_employee = Context::getContext()->employee->id;    
-            }
-        } else {
-            $this->id_employee = (int)$id_employee;
-        }
-        if (!$this->deleted) {
-            $this->deleted = 0;
-        }
-        if (!$this->printable) {
-            $this->printable = 0;
-        }
-        if (!$this->chat) {
-            $this->chat = 0;
-        }
+        parent::__construct($id);
         $this->link = Context::getContext()->link;
-
-        parent::__construct($id, $this->id_lang, $this->id_shop);
         $this->module = $module;
-        $this->table_name = 'mp_customer_order_notes';
+        $this->table_name = 'mp_customer_order_notes_attachments';
         $this->className = 'AdminMpCustomerOrderNotes';
-        $this->smarty = Context::getContext()->smarty;
     }
 
     public static function installSQL($module)
     {
         $sql = array();
-        $sql[] = "CREATE TABLE IF NOT EXISTS `"._DB_PREFIX_."mp_customer_order_notes` (
-            `id_mp_customer_order_notes` int(11) NOT NULL AUTO_INCREMENT,
-            `id_employee` int(11) NOT NULL,
-            `id_order` int(11) NOT NULL,
-            `date_add` datetime NOT NULL,
-            `content` text NOT NULL,
-            `id_lang` int(11) NOT NULL,
-            `id_shop` int(11) NOT NULL,
-            `deleted` boolean NOT NULL,
-            `printable` boolean NOT NULL,
-            `chat` boolean NOT NULL,
-            PRIMARY KEY  (`id_mp_customer_order_notes`)
-        ) ENGINE="._MYSQL_ENGINE_." DEFAULT CHARSET=utf8;";
         $sql[] = "CREATE TABLE IF NOT EXISTS `"._DB_PREFIX_."mp_customer_order_notes_attachments` (
             `id_mp_customer_order_notes_attachments` int(11) NOT NULL AUTO_INCREMENT,
             `id_mp_customer_order_notes` int(11) NOT NULL,
             `id_order` int(11) NOT NULL,
             `link` varchar(255) NOT NULL,
+            `name` varchar(255) NOT NULL,
+            `ext` varchar(255) NOT NULL,
             PRIMARY KEY  (`id_mp_customer_order_notes_attachments`)
         ) ENGINE="._MYSQL_ENGINE_." DEFAULT CHARSET=utf8;";
         foreach ($sql as $query) {
@@ -179,20 +117,40 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
         return true;
     }
 
-    public function getEmployee()
+    public function upload()
+    {
+        $attachment = Tools::fileAttachment('file');
+        $source = $attachment['tmp_name'];
+        $filename = uniqid('', true);
+        $ext = pathinfo($attachment['name'], PATHINFO_EXTENSION);
+        $dest = $this->module->getPath().'upload/'.$filename.'.'.$ext;
+        $result = move_uploaded_file($source, $dest);
+        if ($result) {
+            chmod($dest, 0777);
+        }
+        return array(
+            'result' =>(int)$result,
+            'filename' => $filename,
+            'name' => $attachment['name'],
+            'size' => $attachment['size'],
+            'mime' => $attachment['mime'],
+            'href' => '/'.$filename.'.'.$ext,
+            'ext' => $ext,
+        );
+    }
+
+    public function getAttachments($id_order, $id_mp_customer_order_notes)
     {
         $db = Db::getInstance();
-        $sql = new DbQueryCore();
-        $sql->select('firstname')
-            ->select('lastname')
-            ->from('employee')
-            ->where('id_employee = ' . (int)$this->id_employee);
-        $row = $db->getRow($sql);
-        if ($row) {
-            return $row['firstname'] . ' ' . $row['lastname'];
-        } else {
-            return "";
+        if ((int)$id_mp_customer_order_notes) {
+            $sql =  "select * from "._DB_PREFIX_.$this->table_name
+                ." where id_mp_customer_order_notes=".(int)$id_mp_customer_order_notes;
+        } elseif ((int)$id_order) {
+            $sql =  "select * from "._DB_PREFIX_.$this->table_name
+                ." where id_order=".(int)$id_order;
         }
+        $result = $db->executeS($sql);
+        return $result;
     }
 
     public function getTable()
@@ -282,26 +240,12 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
                 'align' => 'center',
                 'width' => 'auto',
                 'title' => $this->l('Printable', 'mpcustomerordernotes'),
+                'confirm' => 'confirm();',
+                'onclick' => 'javascript:void(0);',
+                'on_click' => 'javascript:void(0);',
                 'search' => false,
                 'active' => 'status',
                 'ajax' => true,
-            ),
-            'chat' => array(
-                'type' => 'bool',
-                'align' => 'center',
-                'width' => 'auto',
-                'title' => $this->l('chat', 'mpcustomerordernotes'),
-                'search' => false,
-                'active' => 'status',
-                'ajax' => true,
-            ),
-            'attachments' => array(
-                'type' => 'bool',
-                'align' => 'left',
-                'width' => 'auto',
-                'title' => $this->l('Att.', 'mpcustomerordernotes'),
-                'search' => false,
-                'float' => true,
             ),
         );
 
@@ -360,52 +304,12 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
                 $row['employee'] = $row['firstname'].' '.$row['lastname'];
                 $row['content'] = str_replace("\\", "", $row['content']);
                 $row['date'] = Tools::displayDate($row['date_add'], null, true);
-                $row['attachments'] = $this->getAttachments($row['id']);
             }
             return $result;
         } else {
             return array();
         }
     }
-
-    public function getAttachments($id)
-    {
-        $obj = new MpCustomerOrderNotesAttachmentsObjectModel($this->module);
-        $att = $obj->getAttachments(0, $id);
-        if ($att) {
-            $total = count($att);
-        } else {
-            $total = 0;
-        }
-        $this->smarty->assign(
-            array(
-                'total' => (int)$total,
-                'id_attachment' => (int)$id,
-                'id_order' => 0,
-            )
-        );
-        return $this->smarty->fetch($this->module->getAdminTemplatePath().'attachment_cell.tpl');
-    }
-
-    public function getAttachmentsByIdOrder($id_order)
-    {
-        $obj = new MpCustomerOrderNotesAttachmentsObjectModel($this->module);
-        $att = $obj->getAttachments($id_order, 0);
-        if ($att) {
-            $total = count($att);
-        } else {
-            $total = 0;
-        }
-        $this->smarty->assign(
-            array(
-                'total' => (int)$total,
-                'id_attachment' => 0,
-                'id_order' => (int)$id_order,
-            )
-        );
-        return $this->smarty->fetch($this->module->getAdminTemplatePath().'attachment_cell.tpl');
-    }
-
 
     public function getTotNotes()
     {

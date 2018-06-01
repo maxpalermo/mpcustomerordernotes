@@ -29,6 +29,7 @@ if (!defined('_PS_VERSION_')) {
 }
 
 require_once _PS_MODULE_DIR_.'mpcustomerordernotes/classes/MpCustomerOrderNotesObjectModel.php';
+require_once _PS_MODULE_DIR_.'mpcustomerordernotes/classes/MpCustomerOrderNotesAttachmentsObjectModel.php';
 require_once _PS_MODULE_DIR_.'mpcustomerordernotes/classes/MpCustomerOrderNotesPrintReport.php';
 require_once _PS_MODULE_DIR_.'mpcustomerordernotes/classes/MpCustomerOrderNotesAdmin.php';
 
@@ -164,7 +165,7 @@ class MpCustomerOrderNotes extends Module
     public function ajax()
     {
         if (Tools::isSubmit('ajax') && Tools::isSubmit('action')) {
-            $action = 'ajaxProcess' . Tools::ucfirst(Tools::getValue('action'));
+            $action = 'ajaxProcess' . Tools::ucfirst(Tools::toCamelCase(Tools::getValue('action')));
             $this->$action();
             exit();
         }
@@ -180,7 +181,7 @@ class MpCustomerOrderNotes extends Module
                 'result' => (int)$result
             )
         );
-        print $this->r_delimiter;     
+        print $this->r_delimiter;
     }
 
     public function install()
@@ -204,7 +205,9 @@ class MpCustomerOrderNotes extends Module
     
     public function installSQL()
     {
-        return MpCustomerOrderNotesObjectModel::installSQL($this);
+        return 
+            MpCustomerOrderNotesObjectModel::installSQL($this) && 
+            MpCustomerOrderNotesAttachmentsObjectModel::installSQL($this);
     }
     
     /**
@@ -271,10 +274,13 @@ class MpCustomerOrderNotes extends Module
         $this->smarty->assign(
             array(
                 'currentindex' => $url.'modules/mpcustomerordernotes/',
+                'security_key' => Tools::encrypt('AdminOrders'),
+                'ajaxAddMessage' => $this->getURL().'ajaxAddMessage.php',
                 'customer_order_table' => $table->getTable(),
                 'tot_notes' => $table->getTotNotes(),
                 'id_order' => Tools::getValue('id_order', 0),
                 'id_employee' => $this->id_employee,
+                'auto_open' => (int)Tools::isSubmit('submitFilter'),
             )
         );
         return $this->smarty->fetch($template);
@@ -405,6 +411,39 @@ class MpCustomerOrderNotes extends Module
         exit();
     }
 
+    public function ajaxProcessShowAttachments()
+    {
+        $id_attachment = (int)Tools::getValue('id_attachment', 0);
+        $db = Db::getInstance();
+        $sql = "select `link` from "._DB_PREFIX_."mp_customer_order_notes_attachments "
+            ."where id_mp_customer_order_notes = ".(int)$id_attachment;
+        $result = $db->executeS($sql);
+        if (!$result) {
+            print $this->l_delimiter;
+            print Tools::jsonEncode(
+                array(
+                    'html' => '',
+                )
+            );
+            print $this->r_delimiter;
+            exit();  
+        }
+        $this->smarty->assign(
+            array(
+                "attachments" => $result,
+                "base_path" => $this->getUrl().'modules/mpcustomerordernotes/',
+            )
+        );
+        print $this->l_delimiter;
+        print Tools::jsonEncode(
+            array(
+                'html' => $this->smarty->fetch($this->getAdminTemplatePath().'attachment_list.tpl')
+            )
+        );
+        print $this->r_delimiter;
+        exit();
+    }
+
     public function ajaxProcessTogglePrintable()
     {
         $adminclass = new MpCustomerOrderNotesAdmin();
@@ -415,17 +454,31 @@ class MpCustomerOrderNotes extends Module
                 'result' => (int)$result
             )
         );
-        print $this->r_delimiter;     
+        print $this->r_delimiter;
+        exit();
+    }
+
+    public function ajaxProcessUploadAttachment()
+    {
+        $attachment = new MpCustomerOrderNotesAttachmentsObjectModel($this);
+        print $this->l_delimiter;
+        print Tools::jsonEncode(
+            $attachment->upload()
+        );
+        print $this->r_delimiter;
         exit();
     }
 
     public function ajaxProcessAddCustomerOrderMessage()
     {
+        $db = Db::getInstance();
         $id_order = (int)Tools::getValue('id_order', 0);
         $id_employee = (int)Tools::getValue('id_employee', 0);
         $date_add = Tools::getValue('date_add');
         $content = Tools::getValue('content');
-        $printable = (int)Tools::getValue('printable');
+        $printable = (int)Tools::getValue('printable', 0);
+        $chat = (int)Tools::getValue('chat', 0);
+        $attachments = Tools::getValue('attachments', array());
         $object = new MpCustomerOrderNotesObjectModel($this);
         $object->id_order = $id_order;
         $object->id_employee = $id_employee;
@@ -433,6 +486,27 @@ class MpCustomerOrderNotes extends Module
         $object->content = pSQL(trim($content));
         $object->printable = (int)$printable;
         $result = (int)$object->add();
+        if ($result) {
+            $id_message = (int)$object->id;
+            foreach ($attachments as $att) {
+                $att_res = $db->insert(
+                    'mp_customer_order_notes_attachments',
+                    array(
+                        'id_mp_customer_order_notes' => (int)$id_message,
+                        'id_order' => (int)$id_order,
+                        'link_path' => pSQL($this->getURL().'upload'.$att['filename']),
+                        'filename' => pSQL($att['filename']),
+                        'filetitle' => pSQL($att['filetitle']),
+                        'file_ext' => pSQL($att['file_ext']),
+                    )
+                );
+                if ($att_res) {
+                    print "Attachment id: ".$db->Insert_ID()."\n";
+                } else {
+                    print "db error: ".$db->getMsgError()."\n";
+                }
+            }
+        }
         $response = array(
             'result' => $result,
             'id_order' => $id_order,
@@ -457,16 +531,16 @@ class MpCustomerOrderNotes extends Module
         exit();
     }
 
-    public function ajaxProcessPrintablemp_customer_order_notes()
+    public function ajaxProcessPrintableMpCustomerOrderNotes()
     {
         $adminclass = new MpCustomerOrderNotesAdmin();
-        $result = 1;
+        $result = $adminclass->togglePrintable();
         print $this->l_delimiter;
         print Tools::jsonEncode(
             array(
                 'result' => (int)$result
             )
         );
-        print $this->r_delimiter;     
+        print $this->r_delimiter;
     }
 }

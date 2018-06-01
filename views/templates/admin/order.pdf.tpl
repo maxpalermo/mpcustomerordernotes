@@ -115,8 +115,8 @@
     </thead>
     <tbody>
         <tr style="text-align: left; font-weight: lighter; font-size: 12pt;">
-            <td style="font-size: {$font_big}; border-right: 1px solid #cccccc;">{$payments.payment_method|escape:'htmlall'}</td>
-            <td style="font-size: {$font_big}}">{$payments.carrier|escape:'htmlall'}</td>
+            <td style="font-size: {$font_big|escape:'htmlall':'UTF-8'}; border-right: 1px solid #cccccc;">{$payments.payment_method|escape:'htmlall':'UTF-8'}</td>
+            <td style="font-size: {$font_big|escape:'htmlall':'UTF-8'}">{$payments.carrier|escape:'htmlall':'UTF-8'}</td>
         </tr>
         <tr style="background-color: white;">
             <td></td>
@@ -133,8 +133,63 @@
     </thead>
     <tbody>
         <tr style="text-align: left; font-weight: lighter; font-size: 12pt;">
-            <td style="border-right: 1px solid #cccccc;">{$address_delivery}</td>
-            <td>{$address_invoice}</td>
+            <td style="border-right: 1px solid #cccccc;">
+                {if $address_delivery->company}
+                    <strong>{$address_delivery->company|escape:'htmlall':'UTF-8'}</strong>
+                {else}
+                    <strong>{$address_delivery->firstname|escape:'htmlall':'UTF-8'} {$address_delivery->lastname|escape:'htmlall':'UTF-8'}</strong>
+                {/if}
+                <br>
+                {$address_delivery->address1|escape:'htmlall':'UTF-8'}
+                <br>
+                {if $address_delivery->address2}
+                    {$address_delivery->address2|escape:'htmlall':'UTF-8'}
+                    <br>
+                {/if}
+                {$address_delivery->postcode|escape:'htmlall':'UTF-8'} - {$address_delivery->city|escape:'htmlall':'UTF-8'} - {$address_delivery->state_name|escape:'htmlall':'UTF-8'}
+                <br>
+                {if $address_delivery->phone}
+                    {l s='Phone' mod='mpcustomerordernotes'}: <strong>{$address_delivery->phone|escape:'htmlall':'UTF-8'}</strong>
+                    <br>
+                {/if}
+                {if $address_delivery->phone_mobile}
+                    {l s='Phone mobile' mod='mpcustomerordernotes'}: <strong>{$address_delivery->phone_mobile|escape:'htmlall':'UTF-8'}</strong>
+                    <br>
+                {/if}
+            </td>
+            <td>
+                {if $address_invoice->company}
+                    <strong>{$address_invoice->company|escape:'htmlall':'UTF-8'}</strong>
+                {else}
+                    <strong>{$address_invoice->firstname|escape:'htmlall':'UTF-8'} {$address_invoice->lastname|escape:'htmlall':'UTF-8'}</strong>
+                {/if}
+                <br>
+                {$address_invoice->address1|escape:'htmlall':'UTF-8'}
+                <br>
+                {if $address_invoice->address2}
+                    {$address_invoice->address2|escape:'htmlall':'UTF-8'}
+                    <br>
+                {/if}
+                {$address_invoice->postcode|escape:'htmlall':'UTF-8'} - {$address_invoice->city|escape:'htmlall':'UTF-8'} - {$address_invoice->state_name|escape:'htmlall':'UTF-8'}
+                <br>
+                {if $address_invoice->phone}
+                    {l s='Phone' mod='mpcustomerordernotes'}: <strong>{$address_invoice->phone|escape:'htmlall':'UTF-8'}</strong>
+                    <br>
+                {/if}
+                {if $address_invoice->phone_mobile}
+                    {l s='Phone mobile' mod='mpcustomerordernotes'}: <strong>{$address_invoice->phone_mobile|escape:'htmlall':'UTF-8'}</strong>
+                    <br>
+                {/if}
+                <hr>
+                {if $address_invoice->dni}
+                    {l s='DNI' mod='mpcustomerordernotes'}: <strong>{$address_invoice->dni|escape:'htmlall':'UTF-8'}</strong>
+                    <br>
+                {/if}
+                {if $address_invoice->vat_number}
+                    {l s='Vat number' mod='mpcustomerordernotes'}: <strong>{$address_invoice->vat_number|escape:'htmlall':'UTF-8'}</strong>
+                    <br>
+                {/if}
+            </td>
         </tr>
         <tr style="background-color: white;">
             <td></td>
@@ -188,7 +243,7 @@
                 {displayPrice price=$product.unit_price_tax_incl}
                 {if $product.product_price_discount>20}
                     <br>
-                    <span style="color: red; font-size: 0.8em; font-weight: bold;">({$product.product_price_discount|string_format:"%.2f"} %)</span>
+                    <span style="color: red; font-size: 0.8em; font-weight: bold;">({{$product.product_price_discount|string_format:"%.2f"}|escape:'htmlall':'UTF-8'} %)</span>
                 {/if}
             </td>
             <td style="width: 10%;text-align: right;font-weight: bold;">{displayPrice price=$product.total_price_tax_incl}</td>
