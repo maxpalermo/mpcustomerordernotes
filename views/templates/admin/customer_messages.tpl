@@ -41,7 +41,7 @@
         position: relative;
         top: 0;
         left: 0;
-        height: 25px;
+        height: 24px;
         background-color: transparent;
         display: inline-block;
     }
@@ -51,9 +51,10 @@
       border-color: #60ba68;
       padding: 1px;
       position: relative;
-      height: 8px;
+      height: 32px;
       border-radius: 3px;
-      margin: 10px;
+      margin: 0 auto;
+      margin-top: 8px;
       text-align: left;
       background: #fff;
       box-shadow: inset 1px 3px 6px rgba(0, 0, 0, 0.12);
@@ -99,8 +100,17 @@
                 </button>
             </span>
         </div>
-        <div id = 'mp-customer-notes' style="display: none;">
-            {$customer_order_table}
+        <div id="mp-customer-notes" style="display: none;">
+            <div class="row">
+                <div class="col-md-12" id="tbl_custom_order_note">
+                    {$customer_order_table}
+                </div>
+            </div>
+            <div class="row" id="tbl-attachments" style="display: none;">
+                <div class="col-md-6">
+                    
+                </div>
+            </div>
         </div>
         <form id="form_notes" method="post">
         <div class="panel-body" id = 'mp-customer-notes-add' style="display: none;">
@@ -153,14 +163,14 @@
                     <div class="col-md-6">
                         <div class="form-group">
                             <label for='note_attachment'>{l s='Attachments' mod='mpcustomerordernotes'}</label>
-                            <ul id="attachments_list">
+                            <ul id="attachments_list" class="list-group">
                             </ul>
                         </div>
                     </div>
                 </div>
                 <div class="panel-footer">
                     <button type="button" class="btn btn-default pull-right" onclick="$('#mp-customer-notes-add').toggle();">
-                        <i class="icon icon-times" style="color: #A94442;"></i>&nbsp;{l s='Cancel' mod='mpcustomerordernotes'}
+                        <i class="icon icon-times" style="color: #A94442;"></i>&nbsp;{l s='Close' mod='mpcustomerordernotes'}
                     </button>
                     <button type="button" class="btn btn-default pull-right" onclick='javascript:saveCustomerOrderNote();'>
                         <i class="icon icon-plus" style="color: #0AAF00;"></i>&nbsp;{l s='Save' mod='mpcustomerordernotes'}
@@ -210,20 +220,25 @@
                 return myXhr;
             },
             success: function (data) {
-                data = JSON.parse(filterResponse(data));
+                data = filterResponse(data);
                 var a = $('<a></a>')
                     .addClass('ref')
                     .attr('href', '{$currentindex}upload'+data.href)
+                    .attr('target', '_blank')
+                    .text(data.name);
+                var b = $('<a></a>')
+                    .attr('onclick', 'javascript:removeAttachment(this);')
                     .attr('filename', data.href)
                     .attr('filetitle', data.name)
                     .attr('file_ext', data.ext)
-                    .text(data.name);
-                var b = $('<button></button>')
-                    .attr('type','button')
-                    .attr('onclick', 'javascript:removeAttachment(this);')
                     .addClass('btn btn-default')
                     .append($('<i></i>').addClass('icon icon-trash'))
-                $('#attachments_list').append($('<li></li>').append($(b)).append('&nbsp;').append($(a)));
+                $('#attachments_list')
+                    .append($('<li></li>')
+                    .addClass("list-group-item")
+                    .append($(b))
+                    .append('&nbsp;')
+                    .append($(a)));
             },
             error: function (error) {
                 // handle error
@@ -266,10 +281,8 @@
 
         // maby check size or type here with upload.getSize() and upload.getType()
         /** Reset progressbar */
-        console.log('reset!');
         upload.reset();
         /** Execute upload  **/
-        wait(1000);
         upload.doUpload();
     });
     /** END HANDKER **/
@@ -285,22 +298,22 @@
         var id_attachment = $(span).attr('id_attachment');
         $.ajax({
             type: "post",
-            dataType: "json",
+            url: "{$currentindex}ajax/ajaxGetAttachments.php",
             data:
             {
                 id_attachment: id_attachment,
                 ajax: true,
-                action: "showAttachments"
+                action: "getAttachments",
+                security_key: '{$security_key|escape:'htmlall':'UTF-8'}'
             },
             success: function(data)
             {
-                var response = JSON.parse(filterResponse(data));
-                var html = response.html;
-                $(this).next().html(html).fadeIn();
+                var response = filterResponse(data);
+                $('#tbl-attachments').fadeIn().find('div').html(response.html);
             },
-            error: function()
+            error: function(data)
             {
-
+                console.log("error:", data);
             }
         });
     }
@@ -315,18 +328,95 @@
 
     function removeAttachment(button)
     {
-        var a = $(button).next();
-        console.log("text: ", $(a).text());
+        if (!confirm("{l s='Remove selected attachment?' mod='mpcustomerordernotes'}")) {
+            return false;
+        }
+        var filename = $(button).attr('filename');
+        $.ajax({
+            type: "post",
+            url: "{$currentindex}ajax/ajaxRemoveAttachment.php",
+            data:
+            {
+                ajax: true,
+                security_key: '{$security_key|escape:'htmlall':'UTF-8'}',
+                action: 'removeAttachment',
+                filename: filename,
+                id_order: {$id_order|escape:'htmlall':'UTF-8'}
+            },
+            success: function(data)
+            {
+                $(button).closest('li').remove();
+            },
+            error: function(data)
+            {
+                console.log(data);
+            }
+        });
     }
 
     function fixTableNotes()
     {
         var tbl_notes = $('table.mp_customer_order_notes');
+        var cell = {};
         $(tbl_notes).find('tbody tr').each(function(){
-            var cell = $(this).find('td:nth-child(5)>a');
-            $(cell).attr('onclick', 'javascript:togglePrintable(this);');
+            cell = $(this).find('td:nth-child(5)>a');
+            $(cell).attr('onclick', 'javascript:toggleCellValue(this);');
             $(cell).attr('href', '');
+            cell = $(this).find('td:nth-child(6)>a');
+            $(cell).attr('onclick', 'javascript:toggleCellValue(this);');
+            $(cell).attr('href', '');
+
         });
+    }
+
+    function toggleCellValue(button)
+    {
+        if (confirm("{l s='Are you sure you want to toggle this option?' mod='mpcustomerordernotes'}")) {
+            var id = Number($(button).closest('tr').find('td:nth-child(1)').text());
+            var idx = $(button).closest('td').index();
+            var cells = [
+                'id',
+                'date',
+                'employee',
+                'message',
+                'printable',
+                'chat',
+                'attachments'
+            ];
+
+            var cell = cells[idx];
+
+            $.ajax({
+                type: 'post',
+                url: '{$mpcustomerordernotes_ajax}ajaxToggleCellValue.php',
+                data:
+                {
+                    id_note: id,
+                    cell: cell,
+                    ajax: true,
+                    action: 'toggleCellValue',
+                    security_key: '{$security_key|escape:'htmlall':'UTF-8'}'
+                },
+                success: function(data)
+                {
+                    response = filterResponse(data);
+                    
+                    //Refresh table
+                    if (response.result == 1) {
+                        $(button).find('i.icon-remove').addClass('hidden').css('color', '#E08F95');
+                        $(button).find('i.icon-check').removeClass('hidden').css('color', '#72C279');
+                    } else {
+                        $(button).find('i.icon-remove').removeClass('hidden').css('color', '#E08F95');
+                        $(button).find('i.icon-check').addClass('hidden').css('color', '#72C279');
+                    }
+                    
+                },
+                error: function(data)
+                {
+                    console.log("error:", data);
+                }
+            });
+        }
     }
 
     function togglePrintable(button)
@@ -343,7 +433,7 @@
                 },
                 success: function(data)
                 {
-                    response = JSON.parse(filterResponse(data));
+                    response = filterResponse(data);
                     
                     //Refresh table
                     if (response.result == 1) {
@@ -363,12 +453,52 @@
         }
     }
 
-    function filterResponse(response)
+    function toggleChat(button)
+    {
+        if (confirm("{l s='Are you sure you want to toggle this option?' mod='mpcustomerordernotes'}")) {
+            var id = Number($(button).closest('tr').find('td:nth-child(1)').text());
+            $.ajax({
+                type: 'post',
+                url: '{$mpcustomerordernotes_ajax}ajaxToggleCellValue.php',
+                data:
+                {
+                    id_note: id,
+                    ajax: true,
+                    action: 'toggleChat',
+                    security_key: '{$security_key|escape:'htmlall':'UTF-8'}'
+                },
+                success: function(data)
+                {
+                    response = filterResponse(data);
+                    
+                    //Refresh table
+                    if (response.result == 1) {
+                        $(button).find('i.icon-remove').addClass('hidden').css('color', '#E08F95');
+                        $(button).find('i.icon-check').removeClass('hidden').css('color', '#72C279');
+                    } else {
+                        $(button).find('i.icon-remove').removeClass('hidden').css('color', '#E08F95');
+                        $(button).find('i.icon-check').addClass('hidden').css('color', '#72C279');
+                    }
+                    
+                },
+                error: function()
+                {
+
+                }
+            });
+        }
+    }
+
+    function filterResponse(response, json = true)
     {
         //Thanks to Ernest Marcinko <http://codecanyon.net/user/anago/portfolio>
         response = response.replace(/^\s*[\r\n]/gm, "");
         response = response.match(/!!START!!(.*[\s\S]*)!!END!!/)[1];
-        return response;
+        if (json) {
+            return JSON.parse(response);
+        } else {
+            return response;
+        }
     }
 
     function panelToggle()
@@ -392,11 +522,15 @@
     }
     function printCustomerOrderNote()
     {
-        window.open("{$currentindex}ajaxPrintReport.php?ajax&action=printCustomerOrderNote&id_order={$id_order|escape:'htmlall':'UTF-8'}", "Report");
+        window.open("{$currentindex}ajax/ajaxPrintReport.php?ajax&action=printCustomerOrderNote&id_order={$id_order|escape:'htmlall':'UTF-8'}&security_key={$security_key|escape:'htmlall':'UTF-8'}", "Report");
+    }
+    function printChat()
+    {
+        window.open("{$currentindex}ajax/ajaxPrintReport.php?ajax&action=printChat&id_order={$id_order|escape:'htmlall':'UTF-8'}&security_key={$security_key|escape:'htmlall':'UTF-8'}", "Report");
     }
     function printOrder()
     {
-        window.open("{$currentindex}ajaxPrintOrder.php?ajax&action=printOrder&id_order={$id_order|escape:'htmlall':'UTF-8'}", "{l s='Order' mod='mpcustomerordernotes'} {$id_order}");
+        window.open("{$currentindex}ajax/ajaxPrintOrder.php?ajax&action=printOrder&id_order={$id_order|escape:'htmlall':'UTF-8'}&security_key={$security_key|escape:'htmlall':'UTF-8'}", "{l s='Order' mod='mpcustomerordernotes'} {$id_order|escape:'htmlall':'UTF-8'}");
     }
     function saveCustomerOrderNote()
     {
@@ -436,7 +570,7 @@
             url: '{$ajaxAddMessage}',
             data:
             {
-                security_key: '{$security_key}',
+                security_key: '{$security_key|escape:'htmlall':'UTF-8'}',
                 id_order: id_order,
                 id_employee: id_employee,
                 date_add: date_send,
@@ -449,10 +583,7 @@
             },
             success: function(response)
             {
-                //Thanks to Ernest Marcinko <http://codecanyon.net/user/anago/portfolio>
-                response = response.replace(/^\s*[\r\n]/gm, "");
-                response = response.match(/!!START!!(.*[\s\S]*)!!END!!/)[1];
-                response = JSON.parse(response);
+                response = filterResponse(response);
                 
                 //Refresh table
                 if (response.result == 1) {
@@ -461,6 +592,7 @@
                         message: '{l s='Message saved.' mod='mpcustomerordernotes'}'
                     });
                     $("#hidden_id_upload").val("0");
+                    removeAttachments()
                     refreshTableCustomerNotes();
                 }
             },
@@ -469,6 +601,10 @@
 
             }
         });
+    }
+    function removeAttachments()
+    {
+        $('#attachments_list').html('');
     }
     function refreshTableCustomerNotes()
     {
@@ -482,9 +618,8 @@
             success: function(response)
             {
                 //Thanks to Ernest Marcinko <http://codecanyon.net/user/anago/portfolio>
-                response = response.replace(/^\s*[\r\n]/gm, "");
-                response = response.match(/!!START!!(.*[\s\S]*)!!END!!/)[1];
-                $('#mp-customer-notes').html(response);
+                response = filterResponse(response, false);
+                $('#tbl_custom_order_note').html(response);
                 var tot = $('#form-mp_customer_order_notes .panel-heading>.badge').text();
                 $('#tot_cust_notes').text(tot);
                 fixTableNotes();

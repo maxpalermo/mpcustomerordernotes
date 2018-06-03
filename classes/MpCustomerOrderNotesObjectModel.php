@@ -120,7 +120,7 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
             if (!isset(Context::getContext()->employee)) {
                 $this->id_employee = (int)Tools::getValue('id_employee');
             } else {
-                $this->id_employee = Context::getContext()->employee->id;    
+                $this->id_employee = Context::getContext()->employee->id;
             }
         } else {
             $this->id_employee = (int)$id_employee;
@@ -352,7 +352,9 @@ class MpCustomerOrderNotesObjectModel extends ObjectModel
                 }
             }
         }
-        
+        if ($this->chat) {
+            $sql->where('chat=1');
+        }
         $result = $db->executeS($sql);
         if ($result) {
             foreach ($result as &$row) {

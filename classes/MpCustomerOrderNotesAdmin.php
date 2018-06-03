@@ -36,6 +36,7 @@ class MpCustomerOrderNotesAdmin
         $this->module = $this->context->controller->module;
         $this->table_name = 'mp_customer_order_notes';
         $this->className = 'AdminMpCustomerOrderNotes';
+        $this->smarty = $this->context->smarty;
     }
 
     public function getEmployee()
@@ -273,41 +274,46 @@ class MpCustomerOrderNotesAdmin
         }
     }
 
-    public function getAttachments()
+    public function getAttachments($id)
     {
-        return "
-            <span class='badge badge-info'><i class='icon icon-paperclip'></i></span> <strong>5</strong>
-        ";
+        $obj = new MpCustomerOrderNotesAttachmentsObjectModel($this->module);
+        $att = $obj->getAttachments(0, $id);
+        if ($att) {
+            $total = count($att);
+        } else {
+            $total = 0;
+        }
+        $this->smarty->assign(
+            array(
+                'total' => (int)$total,
+                'id_attachment' => (int)$id,
+                'id_order' => 0,
+            )
+        );
+        return $this->smarty->fetch($this->module->getAdminTemplatePath().'attachment_cell.tpl');
     }
 
     public function togglePrintable($id)
     {
-        $db = Db::getInstance();
-        $sql_update = "UPDATE "._DB_PREFIX_.$this->table_name.
-            " SET printable = (1 - printable) where id_mp_customer_order_notes=".(int)$id;
-        $sql_get = "select printable from "._DB_PREFIX_.$this->table_name
-            ." where id_mp_customer_order_notes = ".(int)$id;
-        $db->execute($sql_update);
-        return (int)$db->getValue($sql_get);
+        return $this->toggleCellValue($id, 'printable');
     }
 
     public function toggleChat($id)
     {
-        $db = Db::getInstance();
-        $sql_update = "UPDATE "._DB_PREFIX_.$this->table_name.
-            " SET chat = (1 - chat) where id_mp_customer_order_notes=".(int)$id;
-        $sql_get = "select chat from "._DB_PREFIX_.$this->table_name
-            ." where id_mp_customer_order_notes = ".(int)$id;
-        $db->execute($sql_update);
-        return (int)$db->getValue($sql_get);
+        return $this->toggleCellValue($id, 'chat');
     }
 
     public function toggleDeleted($id)
     {
+        return $this->toggleCellValue($id, 'deleted');
+    }
+
+    public function toggleCellValue($id, $cell)
+    {
         $db = Db::getInstance();
         $sql_update = "UPDATE "._DB_PREFIX_.$this->table_name.
-            " SET deleted = (1 - deleted) where id_mp_customer_order_notes=".(int)$id;
-        $sql_get = "select deleted from "._DB_PREFIX_.$this->table_name
+            " SET `$cell` = (1 - `$cell`) where id_mp_customer_order_notes=".(int)$id;
+        $sql_get = "select `$cell` from "._DB_PREFIX_.$this->table_name
             ." where id_mp_customer_order_notes = ".(int)$id;
         $db->execute($sql_update);
         return (int)$db->getValue($sql_get);

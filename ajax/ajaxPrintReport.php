@@ -25,14 +25,21 @@
 */
 
 $current_path = getcwd();
-$prestashop_path = preg_replace('/modules\/mpcustomerordernotes$/', '', $current_path);
+$prestashop_path = preg_replace('/modules\/mpcustomerordernotes\/ajax$/', '', $current_path);
+$module_path = preg_replace('/ajax$/', '', $current_path);
 
-require_once $prestashop_path.'config/config.inc.php';
-require_once $prestashop_path.'init.php';
-require_once $current_path.'/classes/HTMLTemplateOrderPDF.php';
-require_once $current_path.'/mpcustomerordernotes.php';
+require_once $prestashop_path.'/config/config.inc.php';
+require_once $prestashop_path.'/init.php';
+require_once $module_path.'/mpcustomerordernotes.php';
 
-if (Tools::isSubmit('ajax') && Tools::getValue('action', '') == 'printOrder') {
+if (Tools::encrypt('AdminOrders') != Tools::getValue('security_key', '')) {
+    die("Token not valid");
+}
+if (Tools::isSubmit('ajax') && Tools::getValue('action', '') == 'printCustomerOrderNote') {
     $module = new MpCustomerOrderNotes();
-    $module->printOrder();
+    $module->printCustomerOrderNote();
+}
+if (Tools::isSubmit('ajax') && Tools::getValue('action', '') == 'printChat') {
+    $module = new MpCustomerOrderNotes();
+    $module->printCustomerChat();
 }

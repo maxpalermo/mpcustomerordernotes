@@ -22,12 +22,31 @@
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
-<ul class="list-group">
-{foreach $attachments as $att}
-	{assign var='icon' value="`$base_path`view/img/`$att['ext']`.png"}
-	<li class="list-group-item">
-		<img src="{$icon}" style="width: 32px;">&nbsp;
-		<a href="{$base_path}upload/{$att['link']}">{$att['name']}</a>
-	</li>
-{/foreach}
-</ul>
+{assign var=att value=$attachments}
+
+<div class="panel-body">
+	<h3>{l s='Attachments list' mod='mpcustomerordernotes'}</h3>
+	<ul class="list-group">
+	{foreach $attachments as $att}
+		{assign var='icon' value="{$base_path}views/img/{$att['file_ext']}.png"}
+		<li class="list-group-item">
+			<img src="{$icon}" style="width: 32px;">&nbsp;
+			<a class="btn btn-default"
+				href="javascript:removeAttachment($('#att_{$att['id_mp_customer_order_notes_attachments']}'));"      
+				id="att_{$att['id_mp_customer_order_notes_attachments']}"
+				filename="{$att['filename']}"
+                filetitle="{$att['filetitle']}"
+                file_ext="{$att['file_ext']}">
+                <i class="icon icon-trash" style="color: #A94442;"></i>
+			</a>
+			<a href="{$att['link_path']}" target="_blank">{$att['filetitle']}</a>
+		</li>
+	{/foreach}
+	</ul>
+	<br>
+	<button type="button" class="btn btn-default pull-right" onclick="javascript:$('#tbl-attachments').fadeOut();">
+		<i class="icon icon-times" style="color: #A94442;"></i>
+		&nbsp;
+		{l s='Close' mod='mpcustomerordernotes'}
+	</button>
+</div>

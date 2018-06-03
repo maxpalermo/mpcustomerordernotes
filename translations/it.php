@@ -30,6 +30,8 @@ $_MODULE['<{mpcustomerordernotes}prestashop>mpcustomerordernotesobjectmodel_776f
 $_MODULE['<{mpcustomerordernotes}prestashop>mpcustomerordernotesprintreport_a6dee3aa4419c2ee0e6abd605ba906f6'] = '- Pagina %s di %s -';
 $_MODULE['<{mpcustomerordernotes}prestashop>adminmpcustomerordernotes_e5b86259dc812099bcb02ee9fa384da6'] = 'Messaggio eliminato.';
 $_MODULE['<{mpcustomerordernotes}prestashop>adminmpcustomerordernotes_ca9d51de2742393ee4e21a13e1dd5eaf'] = 'Errore durante l\'eliminazione del messaggio: %s';
+$_MODULE['<{mpcustomerordernotes}prestashop>attachment_list_23f35be0be409f5bb0fa00fd50d94e65'] = 'Lista Allegati';
+$_MODULE['<{mpcustomerordernotes}prestashop>attachment_list_d3d2e617335f08df83599665eef8a418'] = 'Chiudi';
 $_MODULE['<{mpcustomerordernotes}prestashop>customer_messages_7bfff64eec181bff5d7a449feb0d4e61'] = 'Note';
 $_MODULE['<{mpcustomerordernotes}prestashop>customer_messages_1988580681c542a129164a4c2e5264c6'] = 'Stampa chat';
 $_MODULE['<{mpcustomerordernotes}prestashop>customer_messages_be4254ec37a7bf0d2babdf04bce774cf'] = 'Stampa Ordine';
@@ -40,8 +42,9 @@ $_MODULE['<{mpcustomerordernotes}prestashop>customer_messages_4755a4ec388d23eedf
 $_MODULE['<{mpcustomerordernotes}prestashop>customer_messages_4d556b19fd04c9ae56b97f1e411c57f4'] = 'Questo messaggio proviene dalla chat';
 $_MODULE['<{mpcustomerordernotes}prestashop>customer_messages_e9cb217697088a98b1937d111d936281'] = 'Allegato';
 $_MODULE['<{mpcustomerordernotes}prestashop>customer_messages_7e2708aeb65763c54052f57ed1a1ec1d'] = 'Allegati';
-$_MODULE['<{mpcustomerordernotes}prestashop>customer_messages_ea4788705e6873b424c65e91c2846b19'] = 'Cancella';
+$_MODULE['<{mpcustomerordernotes}prestashop>customer_messages_d3d2e617335f08df83599665eef8a418'] = 'Chiudi';
 $_MODULE['<{mpcustomerordernotes}prestashop>customer_messages_c9cc8cce247e49bae79f15173ce97354'] = 'Salva';
+$_MODULE['<{mpcustomerordernotes}prestashop>customer_messages_9bcee3d0bafca8d072feb801d16b820f'] = 'Rimuovere questo allegato?';
 $_MODULE['<{mpcustomerordernotes}prestashop>customer_messages_5439d661da8b7be16dcdb0ec68ecf3c4'] = 'Sei sicuro di volere cambiare questa impostazione?';
 $_MODULE['<{mpcustomerordernotes}prestashop>customer_messages_a240fa27925a635b08dc28c9e4f9216d'] = 'Ordine';
 $_MODULE['<{mpcustomerordernotes}prestashop>customer_messages_6947c9f7e94bc1a0c3abb2c23a7b0686'] = 'Nessun messaggio da salvare';

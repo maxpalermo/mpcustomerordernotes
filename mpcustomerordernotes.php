@@ -205,8 +205,8 @@ class MpCustomerOrderNotes extends Module
     
     public function installSQL()
     {
-        return 
-            MpCustomerOrderNotesObjectModel::installSQL($this) && 
+        return
+            MpCustomerOrderNotesObjectModel::installSQL($this) &&
             MpCustomerOrderNotesAttachmentsObjectModel::installSQL($this);
     }
     
@@ -275,12 +275,13 @@ class MpCustomerOrderNotes extends Module
             array(
                 'currentindex' => $url.'modules/mpcustomerordernotes/',
                 'security_key' => Tools::encrypt('AdminOrders'),
-                'ajaxAddMessage' => $this->getURL().'ajaxAddMessage.php',
+                'ajaxAddMessage' => $this->getURL().'ajax/ajaxAddMessage.php',
                 'customer_order_table' => $table->getTable(),
                 'tot_notes' => $table->getTotNotes(),
                 'id_order' => Tools::getValue('id_order', 0),
                 'id_employee' => $this->id_employee,
                 'auto_open' => (int)Tools::isSubmit('submitFilter'),
+                'mpcustomerordernotes_ajax' => $this->getURL().'ajax/',
             )
         );
         return $this->smarty->fetch($template);
@@ -411,12 +412,116 @@ class MpCustomerOrderNotes extends Module
         exit();
     }
 
-    public function ajaxProcessShowAttachments()
+    public function printCustomerChat()
+    {
+        //$PDF_HEADER_LOGO = dirname(__FILE__).'/views/img/tcpdf.jpg';
+        $table = new MpCustomerOrderNotesObjectModel($this, 0, $this->id_employee);
+        $table->id_order = (int)Tools::getValue('id_order', 0);
+        $order = new Order($table->id_order);
+        $customer = new Customer($order->id_customer);
+
+        $table->chat = 1;
+        $list = $table->getList(true);
+        $this->smarty->assign(
+            array(
+                'table_data' => $list,
+                'id_order' => $table->id_order,
+                'date_order' => Tools::displayDate($order->date_add),
+                'customer' => Tools::strtoupper($customer->firstname.' '.$customer->lastname),
+                'ajax_url' => $this->getURL().'ajax/',
+            )
+        );
+        $html = $this->smarty->fetch($this->getAdminTemplatePath().'pdf_table.tpl');
+
+        //print $html;
+        //exit();
+
+        $pageSize = array(210,297);
+        $pdf = new MpCustomerOrderNotesPrintReport("P", "mm", $pageSize, true, "UTF-8", false, false);
+        $pdf->SetCreator(PDF_CREATOR);
+        $pdf->SetAuthor('Massimiliano Palermo');
+        $pdf->SetTitle(
+            sprintf(
+                $this->l('Customer Order notes for order %s'),
+                Tools::getValue('id_order', '')
+            )
+        );
+        $pdf->SetSubject('TCPDF Report');
+        $pdf->SetKeywords('TCPDF, PDF, report, massimiliano palermo, digital solutions, mpcustomerordernote');
+
+        // set default header data
+        /*
+        $pdf->SetHeaderData(
+            $PDF_HEADER_LOGO,
+            300,
+            '{l s='Order Notes' mod='mpcustomerordernote'}',
+            '{l s='Order Notes' mod='mpcustomerordernote'}'
+        );
+        */
+        $pdf->SetHeaderData(PDF_HEADER_LOGO, PDF_HEADER_LOGO_WIDTH, PDF_HEADER_TITLE, PDF_HEADER_STRING);
+
+        // set header and footer fonts
+        $pdf->setHeaderFont(array(PDF_FONT_NAME_MAIN, '', PDF_FONT_SIZE_MAIN));
+        $pdf->setFooterFont(array(PDF_FONT_NAME_DATA, '', PDF_FONT_SIZE_DATA));
+
+        // set default monospaced font
+        $pdf->SetDefaultMonospacedFont(PDF_FONT_MONOSPACED);
+
+        // set margins
+        $pdf->SetMargins(PDF_MARGIN_LEFT, PDF_MARGIN_TOP, PDF_MARGIN_RIGHT);
+        $pdf->SetHeaderMargin(PDF_MARGIN_HEADER);
+        $pdf->SetFooterMargin(PDF_MARGIN_FOOTER);
+
+        // set auto page breaks
+        $pdf->SetAutoPageBreak(true, PDF_MARGIN_BOTTOM);
+
+        // set image scale factor
+        $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
+
+        // set font
+        $pdf->SetFont('helvetica', 'B', 20);
+
+        // add a page
+        $pdf->AddPage();
+        $pdf->SetFont('helvetica', '', 8);
+        $pdf->writeHTML($html, true, false, false, false, '');
+
+        //ob_end_clean();
+        print $pdf->Output('report.pdf', "I");
+
+        exit();
+    }
+
+    public function ajaxProcessRemoveAttachment($filename, $id_order)
+    {
+        $db=Db::getInstance();
+        if (!$filename) {
+            exit();
+        }
+        $sql = "delete from "._DB_PREFIX_."mp_customer_order_notes_attachments ".
+            "where `filename` like '%".pSQL($filename)."' ".
+            "and `id_order`=".(int)$id_order;
+        
+        $result = $db->execute($sql);
+        $path = $this->getPath().'upload'.$filename;
+        unlink($path);
+        print $this->l_delimiter;
+        print Tools::jsonEncode(
+            array(
+                'result' => (int)$result,
+            )
+        );
+        print $this->r_delimiter;
+        exit();
+    }
+
+    public function ajaxProcessGetAttachments()
     {
         $id_attachment = (int)Tools::getValue('id_attachment', 0);
         $db = Db::getInstance();
-        $sql = "select `link` from "._DB_PREFIX_."mp_customer_order_notes_attachments "
+        $sql = "select * from "._DB_PREFIX_."mp_customer_order_notes_attachments "
             ."where id_mp_customer_order_notes = ".(int)$id_attachment;
+        
         $result = $db->executeS($sql);
         if (!$result) {
             print $this->l_delimiter;
@@ -426,12 +531,12 @@ class MpCustomerOrderNotes extends Module
                 )
             );
             print $this->r_delimiter;
-            exit();  
+            exit();
         }
         $this->smarty->assign(
             array(
                 "attachments" => $result,
-                "base_path" => $this->getUrl().'modules/mpcustomerordernotes/',
+                "base_path" => $this->getUrl(),
             )
         );
         print $this->l_delimiter;
@@ -444,10 +549,16 @@ class MpCustomerOrderNotes extends Module
         exit();
     }
 
-    public function ajaxProcessTogglePrintable()
+    public function toggleCellValue($cell, $id, $table_name = 'mp_customer_order_notes')
     {
-        $adminclass = new MpCustomerOrderNotesAdmin();
-        $result = $adminclass->togglePrintable();
+        $db = Db::getInstance();
+        $sql_update = "UPDATE "._DB_PREFIX_.$table_name.
+            " SET `$cell` = (1 - `$cell`) where id_mp_customer_order_notes=".(int)$id;
+        $sql_get = "select `$cell` from "._DB_PREFIX_.$table_name
+            ." where id_mp_customer_order_notes = ".(int)$id;
+        $db->execute($sql_update);
+        $result = (int)$db->getValue($sql_get);
+
         print $this->l_delimiter;
         print Tools::jsonEncode(
             array(
@@ -485,6 +596,7 @@ class MpCustomerOrderNotes extends Module
         $object->date_add = $date_add;
         $object->content = pSQL(trim($content));
         $object->printable = (int)$printable;
+        $object->chat = (int)$chat;
         $result = (int)$object->add();
         if ($result) {
             $id_message = (int)$object->id;

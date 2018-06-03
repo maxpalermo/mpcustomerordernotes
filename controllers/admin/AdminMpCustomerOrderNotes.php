@@ -115,18 +115,15 @@ class AdminMpCustomerOrderNotesController extends ModuleAdminController
             exit();
         }
 
-        if ($deleted && $id_note)
-        {
+        if ($deleted && $id_note) {
             $ordernote->toggleDeleted($id_note);
         }
 
-        if ($printable && $id_note)
-        {
+        if ($printable && $id_note) {
             $ordernote->togglePrintable($id_note);
         }
 
-        if ($chat && $id_note)
-        {
+        if ($chat && $id_note) {
             $ordernote->toggleChat($id_note);
         }
     }
